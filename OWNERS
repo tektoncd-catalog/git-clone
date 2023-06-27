@@ -1,0 +1,17 @@
+# The OWNERS file is used by prow to automatically merge approved PRs.
+
+approvers:
+- bobcatfish
+- vdemeester
+- vinamra28
+- QuanZhang-William
+- ywluogg
+## alumni
+# sbwsg
+# kimsterv
+# ImJasonH
+# dlorenc
+# chmouel
+# wlynch
+# afrittoli
+# dibyom
