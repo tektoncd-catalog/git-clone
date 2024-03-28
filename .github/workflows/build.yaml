@@ -28,7 +28,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
           check-latest: true
 
-      - uses: golang/govulncheck-action@dd3ead030e4f2cf713062f7a3395191802364e13 # v1
+      - uses: golang/govulncheck-action@3a32958c2706f7048305d5a2e53633d7e37e97d0 # v1
 
       - run: |
           go build ./...
