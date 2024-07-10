@@ -106,8 +106,18 @@ func Fetch(logger *zap.SugaredLogger, spec FetchSpec) error {
 		return err
 	}
 	trimmedURL := strings.TrimSpace(spec.URL)
-	if _, err := run(logger, "", "remote", "add", "origin", trimmedURL); err != nil {
-		return err
+	if url, err := run(logger, "", "remote", "get-url", "origin"); err != nil {
+		if _, err := run(logger, "", "remote", "add", "origin", trimmedURL); err != nil {
+			return err
+		}
+	} else {
+		// If the URL changed, we need to set it again.
+		url = strings.TrimSpace(url)
+		if url != trimmedURL {
+			if _, err := run(logger, "", "remote", "set-url", "origin", trimmedURL); err != nil {
+				return err
+			}
+		}
 	}
 
 	hasKnownHosts, err := userHasKnownHostsFile(homepath)
