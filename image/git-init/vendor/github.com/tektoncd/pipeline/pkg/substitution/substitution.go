@@ -54,6 +54,16 @@ var intIndexRegex = regexp.MustCompile(intIndex)
 // - prefix: the prefix of the substitutable variable, e.g. "params" or "context.pipeline"
 // - vars: names of known variables
 func ValidateNoReferencesToUnknownVariables(value, prefix string, vars sets.String) *apis.FieldError {
+	return validateNoReferencesToUnknownVariables(value, prefix, vars, false)
+}
+
+// ValidateNoReferencesToUnknownVariablesWithDetail same as ValidateNoReferencesToUnknownVariables
+// but with more prefix detailed error message
+func ValidateNoReferencesToUnknownVariablesWithDetail(value, prefix string, vars sets.String) *apis.FieldError {
+	return validateNoReferencesToUnknownVariables(value, prefix, vars, true)
+}
+
+func validateNoReferencesToUnknownVariables(value, prefix string, vars sets.String, withDetail bool) *apis.FieldError {
 	if vs, present, errString := ExtractVariablesFromString(value, prefix); present {
 		if errString != "" {
 			return &apis.FieldError{
@@ -64,8 +74,14 @@ func ValidateNoReferencesToUnknownVariables(value, prefix string, vars sets.Stri
 		for _, v := range vs {
 			v = TrimArrayIndex(v)
 			if !vars.Has(v) {
+				var msg string
+				if withDetail {
+					msg = fmt.Sprintf("non-existent variable `%s` in %q", v, value)
+				} else {
+					msg = fmt.Sprintf("non-existent variable in %q", value)
+				}
 				return &apis.FieldError{
-					Message: fmt.Sprintf("non-existent variable in %q", value),
+					Message: msg,
 					// Empty path is required to make the `ViaField`, … work
 					Paths: []string{""},
 				}
@@ -334,9 +350,23 @@ func TrimArrayIndex(s string) string {
 	return arrayIndexingRegex.ReplaceAllString(s, "")
 }
 
-// ExtractParamsExpressions will find all  `$(params.paramName[int])` expressions
-func ExtractParamsExpressions(s string) []string {
+// ExtractArrayIndexingParamsExpressions will find all  `$(params.paramName[int])` expressions
+func ExtractArrayIndexingParamsExpressions(s string) []string {
 	return paramIndexingRegex.FindAllString(s, -1)
+}
+
+func ExtractVariableExpressions(s, prefix string) ([]string, error) {
+	pattern := fmt.Sprintf(braceMatchingRegex, prefix, parameterSubstitution, parameterSubstitution, parameterSubstitution)
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse regex pattern: %w", err)
+	}
+
+	matches := re.FindAllString(s, -1)
+	if len(matches) == 0 {
+		return []string{}, nil
+	}
+	return matches, nil
 }
 
 // ExtractIndexString will find the leftmost match of `[int]`

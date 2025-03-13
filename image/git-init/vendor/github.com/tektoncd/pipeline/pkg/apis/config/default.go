@@ -46,17 +46,27 @@ const (
 	DefaultMaxMatrixCombinationsCount = 256
 	// DefaultResolverTypeValue is used when no default resolver type is specified
 	DefaultResolverTypeValue = ""
+	// default resource requirements, will be applied to all the containers, which has empty resource requirements
+	ResourceRequirementDefaultContainerKey = "default"
 
-	defaultTimeoutMinutesKey             = "default-timeout-minutes"
-	defaultServiceAccountKey             = "default-service-account"
-	defaultManagedByLabelValueKey        = "default-managed-by-label-value"
-	defaultPodTemplateKey                = "default-pod-template"
-	defaultAAPodTemplateKey              = "default-affinity-assistant-pod-template"
-	defaultCloudEventsSinkKey            = "default-cloud-events-sink"
-	defaultTaskRunWorkspaceBinding       = "default-task-run-workspace-binding"
-	defaultMaxMatrixCombinationsCountKey = "default-max-matrix-combinations-count"
-	defaultForbiddenEnv                  = "default-forbidden-env"
-	defaultResolverTypeKey               = "default-resolver-type"
+	DefaultImagePullBackOffTimeout = 0 * time.Minute
+
+	// Default maximum resolution timeout used by the resolution controller before timing out when exceeded
+	DefaultMaximumResolutionTimeout = 1 * time.Minute
+
+	defaultTimeoutMinutesKey                = "default-timeout-minutes"
+	defaultServiceAccountKey                = "default-service-account"
+	defaultManagedByLabelValueKey           = "default-managed-by-label-value"
+	defaultPodTemplateKey                   = "default-pod-template"
+	defaultAAPodTemplateKey                 = "default-affinity-assistant-pod-template"
+	defaultCloudEventsSinkKey               = "default-cloud-events-sink"
+	defaultTaskRunWorkspaceBinding          = "default-task-run-workspace-binding"
+	defaultMaxMatrixCombinationsCountKey    = "default-max-matrix-combinations-count"
+	defaultForbiddenEnv                     = "default-forbidden-env"
+	defaultResolverTypeKey                  = "default-resolver-type"
+	defaultContainerResourceRequirementsKey = "default-container-resource-requirements"
+	defaultImagePullBackOffTimeout          = "default-imagepullbackoff-timeout"
+	defaultMaximumResolutionTimeout         = "default-maximum-resolution-timeout"
 )
 
 // DefaultConfig holds all the default configurations for the config.
@@ -65,16 +75,19 @@ var DefaultConfig, _ = NewDefaultsFromMap(map[string]string{})
 // Defaults holds the default configurations
 // +k8s:deepcopy-gen=true
 type Defaults struct {
-	DefaultTimeoutMinutes             int
-	DefaultServiceAccount             string
-	DefaultManagedByLabelValue        string
-	DefaultPodTemplate                *pod.Template
-	DefaultAAPodTemplate              *pod.AffinityAssistantTemplate
-	DefaultCloudEventsSink            string
-	DefaultTaskRunWorkspaceBinding    string
-	DefaultMaxMatrixCombinationsCount int
-	DefaultForbiddenEnv               []string
-	DefaultResolverType               string
+	DefaultTimeoutMinutes                int
+	DefaultServiceAccount                string
+	DefaultManagedByLabelValue           string
+	DefaultPodTemplate                   *pod.Template
+	DefaultAAPodTemplate                 *pod.AffinityAssistantTemplate
+	DefaultCloudEventsSink               string // Deprecated. Use the events package instead
+	DefaultTaskRunWorkspaceBinding       string
+	DefaultMaxMatrixCombinationsCount    int
+	DefaultForbiddenEnv                  []string
+	DefaultResolverType                  string
+	DefaultContainerResourceRequirements map[string]corev1.ResourceRequirements
+	DefaultImagePullBackOffTimeout       time.Duration
+	DefaultMaximumResolutionTimeout      time.Duration
 }
 
 // GetDefaultsConfigName returns the name of the configmap containing all
@@ -105,6 +118,8 @@ func (cfg *Defaults) Equals(other *Defaults) bool {
 		other.DefaultTaskRunWorkspaceBinding == cfg.DefaultTaskRunWorkspaceBinding &&
 		other.DefaultMaxMatrixCombinationsCount == cfg.DefaultMaxMatrixCombinationsCount &&
 		other.DefaultResolverType == cfg.DefaultResolverType &&
+		other.DefaultImagePullBackOffTimeout == cfg.DefaultImagePullBackOffTimeout &&
+		other.DefaultMaximumResolutionTimeout == cfg.DefaultMaximumResolutionTimeout &&
 		reflect.DeepEqual(other.DefaultForbiddenEnv, cfg.DefaultForbiddenEnv)
 }
 
@@ -117,12 +132,14 @@ func NewDefaultsFromMap(cfgMap map[string]string) (*Defaults, error) {
 		DefaultCloudEventsSink:            DefaultCloudEventSinkValue,
 		DefaultMaxMatrixCombinationsCount: DefaultMaxMatrixCombinationsCount,
 		DefaultResolverType:               DefaultResolverTypeValue,
+		DefaultImagePullBackOffTimeout:    DefaultImagePullBackOffTimeout,
+		DefaultMaximumResolutionTimeout:   DefaultMaximumResolutionTimeout,
 	}
 
 	if defaultTimeoutMin, ok := cfgMap[defaultTimeoutMinutesKey]; ok {
 		timeout, err := strconv.ParseInt(defaultTimeoutMin, 10, 0)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing tracing config %q", defaultTimeoutMinutesKey)
+			return nil, fmt.Errorf("failed parsing default config %q", defaultTimeoutMinutesKey)
 		}
 		tc.DefaultTimeoutMinutes = int(timeout)
 	}
@@ -162,7 +179,7 @@ func NewDefaultsFromMap(cfgMap map[string]string) (*Defaults, error) {
 	if defaultMaxMatrixCombinationsCount, ok := cfgMap[defaultMaxMatrixCombinationsCountKey]; ok {
 		matrixCombinationsCount, err := strconv.ParseInt(defaultMaxMatrixCombinationsCount, 10, 0)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing tracing config %q", defaultMaxMatrixCombinationsCountKey)
+			return nil, fmt.Errorf("failed parsing default config %q", defaultMaxMatrixCombinationsCountKey)
 		}
 		tc.DefaultMaxMatrixCombinationsCount = int(matrixCombinationsCount)
 	}
@@ -177,6 +194,30 @@ func NewDefaultsFromMap(cfgMap map[string]string) (*Defaults, error) {
 
 	if defaultResolverType, ok := cfgMap[defaultResolverTypeKey]; ok {
 		tc.DefaultResolverType = defaultResolverType
+	}
+
+	if resourceRequirementsStringValue, ok := cfgMap[defaultContainerResourceRequirementsKey]; ok {
+		resourceRequirementsValue := make(map[string]corev1.ResourceRequirements)
+		if err := yamlUnmarshal(resourceRequirementsStringValue, defaultContainerResourceRequirementsKey, &resourceRequirementsValue); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal %v", resourceRequirementsStringValue)
+		}
+		tc.DefaultContainerResourceRequirements = resourceRequirementsValue
+	}
+
+	if defaultImagePullBackOff, ok := cfgMap[defaultImagePullBackOffTimeout]; ok {
+		timeout, err := time.ParseDuration(defaultImagePullBackOff)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing default config %q", defaultImagePullBackOffTimeout)
+		}
+		tc.DefaultImagePullBackOffTimeout = timeout
+	}
+
+	if defaultMaximumResolutionTimeout, ok := cfgMap[defaultMaximumResolutionTimeout]; ok {
+		timeout, err := time.ParseDuration(defaultMaximumResolutionTimeout)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing default config %q", defaultMaximumResolutionTimeout)
+		}
+		tc.DefaultMaximumResolutionTimeout = timeout
 	}
 
 	return &tc, nil

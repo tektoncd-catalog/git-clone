@@ -16,11 +16,10 @@ package v1beta1
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
-	"strings"
 
 	"github.com/tektoncd/pipeline/pkg/apis/config"
-	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/strings/slices"
 	"knative.dev/pkg/apis"
@@ -345,24 +344,6 @@ func (m *Matrix) validateParameterInOneOfMatrixOrParams(params Params) (errs *ap
 	for _, param := range params {
 		if matrixParamNames.Has(param.Name) {
 			errs = errs.Also(apis.ErrMultipleOneOf("matrix["+param.Name+"]", "params["+param.Name+"]"))
-		}
-	}
-	return errs
-}
-
-// validateNoWholeArrayResults() is used to ensure a matrix parameter does not contain result references
-// to entire arrays. This is temporary until whole array replacements for matrix paraemeters are supported.
-// See issue #6056 for more details
-func (m *Matrix) validateNoWholeArrayResults() (errs *apis.FieldError) {
-	if m.HasParams() {
-		for i, param := range m.Params {
-			val := param.Value.StringVal
-			expressions, ok := GetVarSubstitutionExpressionsForParam(param)
-			if ok {
-				if LooksLikeContainsResultRefs(expressions) && strings.Contains(val, "[*]") {
-					errs = errs.Also(apis.ErrGeneric("matrix parameters cannot contain whole array result references", "").ViaFieldIndex("matrix.params", i))
-				}
-			}
 		}
 	}
 	return errs
