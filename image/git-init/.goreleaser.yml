@@ -29,7 +29,7 @@ kos:
   - id: git-init-image
     build: binary
     main: .
-    base_image: golang:1.20
+    base_image: golang:1.23
     platforms:
       - all
     tags:
