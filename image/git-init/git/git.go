@@ -106,17 +106,31 @@ func Fetch(logger *zap.SugaredLogger, spec FetchSpec) error {
 		return err
 	}
 	trimmedURL := strings.TrimSpace(spec.URL)
-	if url, err := run(logger, "", "remote", "get-url", "origin"); err != nil {
-		if _, err := run(logger, "", "remote", "add", "origin", trimmedURL); err != nil {
-			return err
+
+	// Check existing remotes to decide whether to add or update origin
+	remotes, err := run(logger, "", "remote")
+	if err != nil {
+		return fmt.Errorf("failed to list git remotes: %w", err)
+	}
+
+	// Check if "origin" remote already exists
+	remoteExists := false
+	for _, remote := range strings.Fields(remotes) {
+		if strings.TrimSpace(remote) == "origin" {
+			remoteExists = true
+			break
+		}
+	}
+
+	if remoteExists {
+		// Remote exists, update its URL
+		if _, err := run(logger, "", "remote", "set-url", "origin", trimmedURL); err != nil {
+			return fmt.Errorf("failed to update origin remote URL: %w", err)
 		}
 	} else {
-		// If the URL changed, we need to set it again.
-		url = strings.TrimSpace(url)
-		if url != trimmedURL {
-			if _, err := run(logger, "", "remote", "set-url", "origin", trimmedURL); err != nil {
-				return err
-			}
+		// Remote doesn't exist, add it
+		if _, err := run(logger, "", "remote", "add", "origin", trimmedURL); err != nil {
+			return fmt.Errorf("failed to add origin remote: %w", err)
 		}
 	}
 
