@@ -19,12 +19,15 @@ package git
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
@@ -71,8 +74,15 @@ type FetchSpec struct {
 	SparseCheckoutDirectories string
 }
 
+type RetryConfig struct {
+	Initial     time.Duration
+	Max         time.Duration
+	Factor      float64
+	MaxAttempts int
+}
+
 // Fetch fetches the specified git repository at the revision into path, using the refspec to fetch if provided.
-func Fetch(logger *zap.SugaredLogger, spec FetchSpec) error {
+func Fetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) error {
 	homepath, err := homedir.Dir()
 	if err != nil {
 		logger.Errorf("Unexpected error getting the user home directory: %v", err)
@@ -177,7 +187,14 @@ func Fetch(logger *zap.SugaredLogger, spec FetchSpec) error {
 	// when the refspec specifies the same destination twice)
 	fetchArgs = append(fetchArgs, "origin", "--update-head-ok", "--force")
 	fetchArgs = append(fetchArgs, fetchParam...)
-	if _, err := run(logger, spec.Path, fetchArgs...); err != nil {
+	if _, _, err := retryWithBackoff(
+		func() (string, error) { return run(logger, spec.Path, fetchArgs...) },
+		retryConfig.Initial,
+		retryConfig.Max,
+		retryConfig.Factor,
+		retryConfig.MaxAttempts,
+		logger,
+	); err != nil {
 		return fmt.Errorf("failed to fetch %v: %v", fetchParam, err)
 	}
 	// After performing a fetch, verify that the item to checkout is actually valid
@@ -199,7 +216,7 @@ func Fetch(logger *zap.SugaredLogger, spec FetchSpec) error {
 	}
 	logger.Infof("Successfully cloned %s @ %s (%s) in path %s", trimmedURL, commit, ref, spec.Path)
 	if spec.Submodules {
-		if err := submoduleFetch(logger, spec); err != nil {
+		if err := submoduleFetch(logger, spec, retryConfig); err != nil {
 			return err
 		}
 	}
@@ -223,7 +240,7 @@ func showRef(logger *zap.SugaredLogger, revision, path string) (string, error) {
 	return strings.TrimSuffix(output, "\n"), nil
 }
 
-func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec) error {
+func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) error {
 	if spec.Path != "" {
 		if err := os.Chdir(spec.Path); err != nil {
 			return fmt.Errorf("failed to change directory with path %s; err: %w", spec.Path, err)
@@ -233,7 +250,14 @@ func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec) error {
 	if spec.Depth > 0 {
 		updateArgs = append(updateArgs, fmt.Sprintf("--depth=%d", spec.Depth))
 	}
-	if _, err := run(logger, "", updateArgs...); err != nil {
+	if _, _, err := retryWithBackoff(
+		func() (string, error) { return run(logger, "", updateArgs...) },
+		retryConfig.Initial,
+		retryConfig.Max,
+		retryConfig.Factor,
+		retryConfig.MaxAttempts,
+		logger,
+	); err != nil {
 		return err
 	}
 	logger.Infof("Successfully initialized and updated submodules in path %s", spec.Path)
@@ -335,4 +359,40 @@ func configSparseCheckout(logger *zap.SugaredLogger, spec FetchSpec) error {
 		}
 	}
 	return nil
+}
+
+type operation[T any] func() (T, error)
+
+// retryWithBackoff runs `operation` until it succeeds or the context is done,
+// with exponential backoff and jitter between retries.
+func retryWithBackoff[T any](
+	operation operation[T],
+	initial time.Duration,
+	max time.Duration,
+	factor float64,
+	maxAttempts int,
+	logger *zap.SugaredLogger,
+) (T, time.Duration, error) {
+
+	waitTime := time.Duration(0)
+
+	for attempt := 0; ; attempt++ {
+		logger.Infof("Retrying operation (attempt %d)", attempt+1)
+		result, err := operation()
+		if err == nil {
+			return result, waitTime, nil
+		}
+
+		if attempt+1 == maxAttempts {
+			return result, waitTime, err
+		}
+
+		// compute backoff: exponential
+		backoff := min(time.Duration(float64(initial)*math.Pow(factor, float64(attempt))), max)
+		// add jitter: random in [0, next)
+		jitter := time.Duration(rand.Int63n(int64(backoff)))
+		wait := backoff + jitter/2
+		time.Sleep(wait)
+		waitTime += wait
+	}
 }
