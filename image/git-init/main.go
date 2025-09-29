@@ -17,6 +17,7 @@ package main
 
 import (
 	"flag"
+	"time"
 
 	"github.com/tektoncd-catalog/git-clone/git-init/git"
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -26,6 +27,7 @@ import (
 
 var (
 	fetchSpec              git.FetchSpec
+	retryConfig            git.RetryConfig
 	terminationMessagePath string
 )
 
@@ -39,6 +41,10 @@ func init() {
 	flag.UintVar(&fetchSpec.Depth, "depth", 1, "Perform a shallow clone to this depth")
 	flag.StringVar(&terminationMessagePath, "terminationMessagePath", "/tekton/termination", "Location of file containing termination message")
 	flag.StringVar(&fetchSpec.SparseCheckoutDirectories, "sparseCheckoutDirectories", "", "String of directory patterns separated by a comma")
+	flag.DurationVar(&retryConfig.Initial, "retryInitial", 1*time.Second, "Initial retry duration for fetch operations")
+	flag.DurationVar(&retryConfig.Max, "retryMax", 10*time.Second, "Maximum retry duration for fetch operations")
+	flag.Float64Var(&retryConfig.Factor, "retryFactor", 2.0, "Retry factor for fetch operations")
+	flag.IntVar(&retryConfig.MaxAttempts, "retryMaxAttempts", 1, "Maximum number of retry attempts for fetch operations")
 }
 
 func main() {
@@ -49,7 +55,7 @@ func main() {
 		_ = logger.Sync()
 	}()
 
-	if err := git.Fetch(logger, fetchSpec); err != nil {
+	if err := git.Fetch(logger, fetchSpec, retryConfig); err != nil {
 		logger.Fatalf("Error fetching git repository: %s", err)
 	}
 
