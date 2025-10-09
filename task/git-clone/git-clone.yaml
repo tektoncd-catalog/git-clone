@@ -59,6 +59,12 @@ spec:
       description: Initialize and fetch git submodules.
       type: string
       default: "true"
+    - name: submodulePaths
+      description: |
+        Comma-separated list of specific submodule paths to initialize and fetch. Only submodules in the specified directories and their subdirectories will be fetched.
+        Empty string fetches all submodules. Parameter "submodules" must be set to "true" to make this parameter applicable.
+      type: string
+      default: ""
     - name: depth
       description: Perform a shallow clone, fetching only the most recent N commits.
       type: string
@@ -129,6 +135,8 @@ spec:
         value: $(params.refspec)
       - name: PARAM_SUBMODULES
         value: $(params.submodules)
+      - name: PARAM_SUBMODULE_PATHS
+        value: $(params.submodulePaths)
       - name: PARAM_DEPTH
         value: $(params.depth)
       - name: PARAM_SSL_VERIFY
@@ -221,6 +229,7 @@ spec:
         test -z "${PARAM_NO_PROXY}" || export NO_PROXY="${PARAM_NO_PROXY}"
 
         git config --global --add safe.directory "${WORKSPACE_OUTPUT_PATH}"
+
         /ko-app/git-init \
           -url="${PARAM_URL}" \
           -revision="${PARAM_REVISION}" \
@@ -229,7 +238,8 @@ spec:
           -sslVerify="${PARAM_SSL_VERIFY}" \
           -submodules="${PARAM_SUBMODULES}" \
           -depth="${PARAM_DEPTH}" \
-          -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}"
+          -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}" \
+          -submodulePath="${PARAM_SUBMODULE_PATHS}"
         cd "${CHECKOUT_DIR}"
         RESULT_SHA="$(git rev-parse HEAD)"
         EXIT_CODE="$?"

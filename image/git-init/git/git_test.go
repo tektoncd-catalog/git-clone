@@ -329,6 +329,38 @@ func TestFetch(t *testing.T) {
 				NOProxy:                   "",
 				SparseCheckoutDirectories: "",
 			},
+		}, {
+			name:       "test-clone-with-submodules-empty-paths",
+			logMessage: "updated submodules",
+			wantErr:    false,
+			spec: FetchSpec{
+				URL:            "",
+				Revision:       "",
+				Refspec:        "",
+				Path:           "",
+				Depth:          0,
+				Submodules:     true,
+				SubmodulePaths: []string{},
+				HTTPProxy:      "",
+				HTTPSProxy:     "",
+				NOProxy:        "",
+			},
+		}, {
+			name:       "test-clone-with-submodules-defined-paths",
+			logMessage: "updated submodules",
+			wantErr:    false,
+			spec: FetchSpec{
+				URL:            "",
+				Revision:       "",
+				Refspec:        "",
+				Path:           "",
+				Depth:          0,
+				Submodules:     true,
+				SubmodulePaths: []string{"test_submod"},
+				HTTPProxy:      "",
+				HTTPSProxy:     "",
+				NOProxy:        "",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -342,13 +374,19 @@ func TestFetch(t *testing.T) {
 			logger := zap.New(observer).Sugar()
 
 			submodPath := ""
+			submodName := "default"
 			if tt.spec.Submodules {
-				submodPath := t.TempDir()
-				createTempGit(t, logger, submodPath, "")
+				submodPath = t.TempDir()
+				createTempGit(t, logger, submodPath, "", "")
+			}
+
+			if len(tt.spec.SubmodulePaths) > 0 {
+				// test submodule path, replace template value
+				submodName = tt.spec.SubmodulePaths[0]
 			}
 
 			gitDir := t.TempDir()
-			createTempGit(t, logger, gitDir, submodPath)
+			createTempGit(t, logger, gitDir, submodPath, submodName)
 			tt.spec.URL = gitDir
 
 			targetPath := t.TempDir()
@@ -393,7 +431,7 @@ func TestFetch(t *testing.T) {
 }
 
 // Create a temporary Git dir locally for testing against instead of using a potentially flaky remote URL.
-func createTempGit(t *testing.T, logger *zap.SugaredLogger, gitDir string, submodPath string) {
+func createTempGit(t *testing.T, logger *zap.SugaredLogger, gitDir string, submodPath string, submodName string) {
 	t.Helper()
 	if _, err := run(logger, "", "init", gitDir); err != nil {
 		t.Fatal(err)
@@ -420,7 +458,25 @@ func createTempGit(t *testing.T, logger *zap.SugaredLogger, gitDir string, submo
 	}
 
 	if submodPath != "" {
-		if _, err := run(logger, "", "submodule", "add", submodPath); err != nil {
+		// file protocol is necessary to clone submodules since the fixture is only written to the filesystem
+		if _, err := run(logger, "", "config", "--global", "protocol.file.allow", "always"); err != nil {
+			t.Fatal(err)
+		}
+
+		if submodName != "" {
+			if _, err := run(logger, "", "submodule", "add", submodPath, submodName); err != nil {
+				t.Fatal(err.Error())
+			}
+		} else {
+			if _, err := run(logger, "", "submodule", "add", submodPath); err != nil {
+				t.Fatal(err.Error())
+			}
+		}
+
+		if _, err := run(logger, "", "add", "."); err != nil {
+			t.Fatal(err.Error())
+		}
+		if _, err := run(logger, "", "commit", "-m", "Add submodule"); err != nil {
 			t.Fatal(err.Error())
 		}
 	}
