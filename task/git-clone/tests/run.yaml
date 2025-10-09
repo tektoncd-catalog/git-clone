@@ -57,6 +57,25 @@ spec:
 apiVersion: tekton.dev/v1beta1
 kind: TaskRun
 metadata:
+  name: git-clone-run-submodules-with-paths
+spec:
+  workspaces:
+    - name: output
+      emptyDir: {}
+  taskRef:
+    name: git-clone
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  params:
+    - name: url
+      value: https://github.com/githubtraining/example-dependency
+    - name: submodulePaths
+      value: "js"
+---
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
   name: git-clone-run-no-depth-2
 spec:
   workspaces:
