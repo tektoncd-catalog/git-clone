@@ -16,7 +16,9 @@ limitations under the License.
 package main
 
 import (
+	"encoding/csv"
 	"flag"
+	"strings"
 	"time"
 
 	"github.com/tektoncd-catalog/git-clone/git-init/git"
@@ -29,6 +31,7 @@ var (
 	fetchSpec              git.FetchSpec
 	retryConfig            git.RetryConfig
 	terminationMessagePath string
+	submodulePathsCSV      string
 )
 
 func init() {
@@ -38,6 +41,7 @@ func init() {
 	flag.StringVar(&fetchSpec.Path, "path", "", "Path of directory under which Git repository will be copied")
 	flag.BoolVar(&fetchSpec.SSLVerify, "sslVerify", true, "Enable/Disable SSL verification in the git config")
 	flag.BoolVar(&fetchSpec.Submodules, "submodules", true, "Initialize and fetch Git submodules")
+	flag.StringVar(&submodulePathsCSV, "submodulePath", "", "Comma-separated list of submodule paths to be used in git submodule update command")
 	flag.UintVar(&fetchSpec.Depth, "depth", 1, "Perform a shallow clone to this depth")
 	flag.StringVar(&terminationMessagePath, "terminationMessagePath", "/tekton/termination", "Location of file containing termination message")
 	flag.StringVar(&fetchSpec.SparseCheckoutDirectories, "sparseCheckoutDirectories", "", "String of directory patterns separated by a comma")
@@ -54,6 +58,16 @@ func main() {
 	defer func() {
 		_ = logger.Sync()
 	}()
+
+	// Parse comma-separated submodule paths using CSV parser
+	if submodulePathsCSV != "" {
+		reader := csv.NewReader(strings.NewReader(submodulePathsCSV))
+		paths, err := reader.Read()
+		if err != nil {
+			logger.Fatalf("Error parsing submodulePath: %s", err)
+		}
+		fetchSpec.SubmodulePaths = paths
+	}
 
 	if err := git.Fetch(logger, fetchSpec, retryConfig); err != nil {
 		logger.Fatalf("Error fetching git repository: %s", err)
