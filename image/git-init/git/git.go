@@ -67,6 +67,7 @@ type FetchSpec struct {
 	Path                      string
 	Depth                     uint
 	Submodules                bool
+	SubmodulePaths            []string
 	SSLVerify                 bool
 	HTTPProxy                 string
 	HTTPSProxy                string
@@ -249,6 +250,9 @@ func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig Retry
 	updateArgs := []string{"submodule", "update", "--recursive", "--init", "--force"}
 	if spec.Depth > 0 {
 		updateArgs = append(updateArgs, fmt.Sprintf("--depth=%d", spec.Depth))
+	}
+	if len(spec.SubmodulePaths) > 0 {
+		updateArgs = append(updateArgs, spec.SubmodulePaths...)
 	}
 	if _, _, err := retryWithBackoff(
 		func() (string, error) { return run(logger, "", updateArgs...) },
