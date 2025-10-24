@@ -372,6 +372,7 @@ func TestFetch(t *testing.T) {
 				}
 			}()
 			logger := zap.New(observer).Sugar()
+			logLine := 1
 
 			submodPath := ""
 			submodName := "default"
@@ -421,10 +422,19 @@ func TestFetch(t *testing.T) {
 					t.Errorf("directory patterns and sparse-checkout patterns do not match")
 				}
 			}
-			logLine := 1
+
 			if tt.spec.Submodules {
+				submoduleDirs, err := filepath.Glob(".git/modules/*")
+				if err != nil {
+					t.Fatalf("Error finding submodule directories: %v", err)
+				}
+
+				if len(submoduleDirs) == 0 {
+					t.Error("No cloned submodules found")
+				}
 				logLine = 3
 			}
+
 			checkLogMessage(t, tt.logMessage, log, logLine)
 		})
 	}
