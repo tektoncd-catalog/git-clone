@@ -361,6 +361,23 @@ func TestFetch(t *testing.T) {
 				HTTPSProxy:     "",
 				NOProxy:        "",
 			},
+		}, {
+			name:       "test-clone-with-depth",
+			logMessage: "Successfully cloned",
+			wantErr:    false,
+			spec: FetchSpec{
+				URL:                       "",
+				Revision:                  "",
+				Refspec:                   "",
+				Path:                      "",
+				Depth:                     1,
+				Submodules:                false,
+				SSLVerify:                 false,
+				HTTPProxy:                 "",
+				HTTPSProxy:                "",
+				NOProxy:                   "",
+				SparseCheckoutDirectories: "",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -420,6 +437,29 @@ func TestFetch(t *testing.T) {
 
 				if cmp.Diff(dirPatterns, sparsePatterns) != "" {
 					t.Errorf("directory patterns and sparse-checkout patterns do not match")
+				}
+			}
+
+			if tt.spec.Depth > 0 {
+				shallowFile, err := os.Open(".git/shallow")
+				if err != nil {
+					t.Fatal("Faile to read shallow file")
+				}
+				defer shallowFile.Close()
+
+				var commitCount int
+				scanner := bufio.NewScanner(shallowFile)
+				for scanner.Scan() {
+					commitCount++
+				}
+				if commitCount != int(tt.spec.Depth) {
+					t.Errorf("Expected %d commits in shallow file, got %d", tt.spec.Depth, commitCount)
+				}
+
+				// Verify remote.origin.fetch was unset
+				_, err = run(logger, "", "config", "--get", "remote.origin.fetch")
+				if err == nil {
+					t.Error("git fetch config should be unset for a shallow clone")
 				}
 			}
 
