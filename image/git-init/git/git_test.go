@@ -560,6 +560,48 @@ func (f *SucceedAfter) Run() (string, error) {
 	return "", fmt.Errorf("temporary error")
 }
 
+func TestBuildSubmoduleUpdateArgs(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     FetchSpec
+		expected []string
+	}{
+		{
+			name: "no depth, no submodule paths",
+			spec: FetchSpec{
+				Depth:          0,
+				SubmodulePaths: nil,
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force"},
+		},
+		{
+			name: "with depth, no submodule paths",
+			spec: FetchSpec{
+				Depth:          5,
+				SubmodulePaths: nil,
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "--depth=5"},
+		},
+		{
+			name: "no depth, with submodule paths",
+			spec: FetchSpec{
+				Depth:          0,
+				SubmodulePaths: []string{"path/to/submod1", "path/to/submod2"},
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "path/to/submod1", "path/to/submod2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildSubmoduleUpdateArgs(tt.spec)
+			if diff := cmp.Diff(tt.expected, got); diff != "" {
+				t.Errorf("buildSubmoduleUpdateArgs() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestRetryWithBackoff(t *testing.T) {
 	withTemporaryGitConfig(t)
 	tests := []struct {
