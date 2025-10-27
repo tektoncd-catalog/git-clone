@@ -246,12 +246,7 @@ func showRef(logger *zap.SugaredLogger, revision, path string) (string, error) {
 	return strings.TrimSuffix(output, "\n"), nil
 }
 
-func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) error {
-	if spec.Path != "" {
-		if err := os.Chdir(spec.Path); err != nil {
-			return fmt.Errorf("failed to change directory with path %s; err: %w", spec.Path, err)
-		}
-	}
+func buildSubmoduleUpdateArgs(spec FetchSpec) []string {
 	updateArgs := []string{"submodule", "update", "--recursive", "--init", "--force"}
 	if spec.Depth > 0 {
 		updateArgs = append(updateArgs, fmt.Sprintf("--depth=%d", spec.Depth))
@@ -259,6 +254,16 @@ func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig Retry
 	if len(spec.SubmodulePaths) > 0 {
 		updateArgs = append(updateArgs, spec.SubmodulePaths...)
 	}
+	return updateArgs
+}
+
+func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) error {
+	if spec.Path != "" {
+		if err := os.Chdir(spec.Path); err != nil {
+			return fmt.Errorf("failed to change directory with path %s; err: %w", spec.Path, err)
+		}
+	}
+	updateArgs := buildSubmoduleUpdateArgs(spec)
 	if _, _, err := retryWithBackoff(
 		func() (string, error) { return run(logger, "", updateArgs...) },
 		retryConfig.Initial,
