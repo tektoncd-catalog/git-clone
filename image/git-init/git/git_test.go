@@ -575,12 +575,28 @@ func TestBuildSubmoduleUpdateArgs(t *testing.T) {
 			expected: []string{"submodule", "update", "--recursive", "--init", "--force"},
 		},
 		{
+			name: "with depth, no submodule paths",
+			spec: FetchSpec{
+				Depth:          5,
+				SubmodulePaths: nil,
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "--depth=5", "--single-branch"},
+		},
+		{
 			name: "no depth, with submodule paths",
 			spec: FetchSpec{
 				Depth:          0,
 				SubmodulePaths: []string{"path/to/submod1", "path/to/submod2"},
 			},
 			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "path/to/submod1", "path/to/submod2"},
+		},
+		{
+			name: "with depth and submodule paths",
+			spec: FetchSpec{
+				Depth:          1,
+				SubmodulePaths: []string{"test_submod"},
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "--depth=1", "--single-branch", "test_submod"},
 		},
 	}
 

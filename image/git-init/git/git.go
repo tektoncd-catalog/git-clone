@@ -249,7 +249,7 @@ func showRef(logger *zap.SugaredLogger, revision, path string) (string, error) {
 func buildSubmoduleUpdateArgs(spec FetchSpec) []string {
 	updateArgs := []string{"submodule", "update", "--recursive", "--init", "--force"}
 	if spec.Depth > 0 {
-		updateArgs = append(updateArgs, fmt.Sprintf("--depth=%d", spec.Depth))
+		updateArgs = append(updateArgs, fmt.Sprintf("--depth=%d", spec.Depth), "--single-branch")
 	}
 	if len(spec.SubmodulePaths) > 0 {
 		updateArgs = append(updateArgs, spec.SubmodulePaths...)
