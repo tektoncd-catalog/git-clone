@@ -167,6 +167,11 @@ func Fetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) e
 	}
 	if spec.Depth > 0 {
 		fetchArgs = append(fetchArgs, fmt.Sprintf("--depth=%d", spec.Depth))
+
+		// Prevent fetching of unrelated git objects with shallow clones.
+		if _, err := run(logger, "", "config", "--unset", "remote.origin.fetch"); err != nil {
+			logger.Warnf("Failed to unset remote.origin.fetch in git config: %s", err)
+		}
 	}
 
 	// Fetch the revision and verify with FETCH_HEAD
@@ -241,19 +246,24 @@ func showRef(logger *zap.SugaredLogger, revision, path string) (string, error) {
 	return strings.TrimSuffix(output, "\n"), nil
 }
 
+func buildSubmoduleUpdateArgs(spec FetchSpec) []string {
+	updateArgs := []string{"submodule", "update", "--recursive", "--init", "--force"}
+	if spec.Depth > 0 {
+		updateArgs = append(updateArgs, fmt.Sprintf("--depth=%d", spec.Depth), "--single-branch")
+	}
+	if len(spec.SubmodulePaths) > 0 {
+		updateArgs = append(updateArgs, spec.SubmodulePaths...)
+	}
+	return updateArgs
+}
+
 func submoduleFetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) error {
 	if spec.Path != "" {
 		if err := os.Chdir(spec.Path); err != nil {
 			return fmt.Errorf("failed to change directory with path %s; err: %w", spec.Path, err)
 		}
 	}
-	updateArgs := []string{"submodule", "update", "--recursive", "--init", "--force"}
-	if spec.Depth > 0 {
-		updateArgs = append(updateArgs, fmt.Sprintf("--depth=%d", spec.Depth))
-	}
-	if len(spec.SubmodulePaths) > 0 {
-		updateArgs = append(updateArgs, spec.SubmodulePaths...)
-	}
+	updateArgs := buildSubmoduleUpdateArgs(spec)
 	if _, _, err := retryWithBackoff(
 		func() (string, error) { return run(logger, "", updateArgs...) },
 		retryConfig.Initial,

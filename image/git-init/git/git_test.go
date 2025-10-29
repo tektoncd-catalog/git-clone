@@ -361,6 +361,23 @@ func TestFetch(t *testing.T) {
 				HTTPSProxy:     "",
 				NOProxy:        "",
 			},
+		}, {
+			name:       "test-clone-with-depth",
+			logMessage: "Successfully cloned",
+			wantErr:    false,
+			spec: FetchSpec{
+				URL:                       "",
+				Revision:                  "",
+				Refspec:                   "",
+				Path:                      "",
+				Depth:                     1,
+				Submodules:                false,
+				SSLVerify:                 false,
+				HTTPProxy:                 "",
+				HTTPSProxy:                "",
+				NOProxy:                   "",
+				SparseCheckoutDirectories: "",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -372,6 +389,7 @@ func TestFetch(t *testing.T) {
 				}
 			}()
 			logger := zap.New(observer).Sugar()
+			logLine := 1
 
 			submodPath := ""
 			submodName := "default"
@@ -421,10 +439,42 @@ func TestFetch(t *testing.T) {
 					t.Errorf("directory patterns and sparse-checkout patterns do not match")
 				}
 			}
-			logLine := 1
+
+			if tt.spec.Depth > 0 {
+				shallowFile, err := os.Open(".git/shallow")
+				if err != nil {
+					t.Fatal("Faile to read shallow file")
+				}
+				defer shallowFile.Close()
+
+				var commitCount int
+				scanner := bufio.NewScanner(shallowFile)
+				for scanner.Scan() {
+					commitCount++
+				}
+				if commitCount != int(tt.spec.Depth) {
+					t.Errorf("Expected %d commits in shallow file, got %d", tt.spec.Depth, commitCount)
+				}
+
+				// Verify remote.origin.fetch was unset
+				_, err = run(logger, "", "config", "--get", "remote.origin.fetch")
+				if err == nil {
+					t.Error("git fetch config should be unset for a shallow clone")
+				}
+			}
+
 			if tt.spec.Submodules {
+				submoduleDirs, err := filepath.Glob(".git/modules/*")
+				if err != nil {
+					t.Fatalf("Error finding submodule directories: %v", err)
+				}
+
+				if len(submoduleDirs) == 0 {
+					t.Error("No cloned submodules found")
+				}
 				logLine = 3
 			}
+
 			checkLogMessage(t, tt.logMessage, log, logLine)
 		})
 	}
@@ -508,6 +558,56 @@ func (f *SucceedAfter) Run() (string, error) {
 		return "success", nil
 	}
 	return "", fmt.Errorf("temporary error")
+}
+
+func TestBuildSubmoduleUpdateArgs(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     FetchSpec
+		expected []string
+	}{
+		{
+			name: "no depth, no submodule paths",
+			spec: FetchSpec{
+				Depth:          0,
+				SubmodulePaths: nil,
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force"},
+		},
+		{
+			name: "with depth, no submodule paths",
+			spec: FetchSpec{
+				Depth:          5,
+				SubmodulePaths: nil,
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "--depth=5", "--single-branch"},
+		},
+		{
+			name: "no depth, with submodule paths",
+			spec: FetchSpec{
+				Depth:          0,
+				SubmodulePaths: []string{"path/to/submod1", "path/to/submod2"},
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "path/to/submod1", "path/to/submod2"},
+		},
+		{
+			name: "with depth and submodule paths",
+			spec: FetchSpec{
+				Depth:          1,
+				SubmodulePaths: []string{"test_submod"},
+			},
+			expected: []string{"submodule", "update", "--recursive", "--init", "--force", "--depth=1", "--single-branch", "test_submod"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildSubmoduleUpdateArgs(tt.spec)
+			if diff := cmp.Diff(tt.expected, got); diff != "" {
+				t.Errorf("buildSubmoduleUpdateArgs() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
 }
 
 func TestRetryWithBackoff(t *testing.T) {
