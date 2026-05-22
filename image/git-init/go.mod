@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/tektoncd/pipeline v1.0.1
+	github.com/tektoncd/pipeline v1.0.2
 	go.uber.org/zap v1.27.0
 )
 
