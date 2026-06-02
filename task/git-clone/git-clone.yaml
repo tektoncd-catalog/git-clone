@@ -105,6 +105,11 @@ spec:
       description: Log the commands that are executed during `git-clone`'s operation.
       type: string
       default: "true"
+    - name: userFriendlyErrors
+      description: |
+        Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
+      type: string
+      default: "true"
     - name: gitInitImage
       description: The image providing the git-init binary that this Task runs.
       type: string
@@ -155,6 +160,8 @@ spec:
         value: $(params.noProxy)
       - name: PARAM_VERBOSE
         value: $(params.verbose)
+      - name: PARAM_USER_FRIENDLY_ERRORS
+        value: $(params.userFriendlyErrors)
       - name: PARAM_SPARSE_CHECKOUT_DIRECTORIES
         value: $(params.sparseCheckoutDirectories)
       - name: PARAM_USER_HOME
@@ -239,7 +246,8 @@ spec:
           -submodules="${PARAM_SUBMODULES}" \
           -depth="${PARAM_DEPTH}" \
           -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}" \
-          -submodulePaths="${PARAM_SUBMODULE_PATHS}"
+          -submodulePaths="${PARAM_SUBMODULE_PATHS}" \
+          -userFriendlyErrors="${PARAM_USER_FRIENDLY_ERRORS}"
         cd "${CHECKOUT_DIR}"
         RESULT_SHA="$(git rev-parse HEAD)"
         EXIT_CODE="$?"

@@ -18,6 +18,7 @@ package git
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -42,6 +43,24 @@ const (
 // sshURLRegexFormat matches the url of SSH git repository
 var sshURLRegexFormat = regexp.MustCompile(`(ssh://[\w\d\.]+|.+@?.+\..+:)(:[\d]+){0,1}/*(.*)`)
 
+// GitError wraps a failed git command with its stderr/stdout output.
+type GitError struct {
+	Args   []string
+	Dir    string
+	Output string
+	Err    error
+}
+
+func (e *GitError) Error() string {
+	out := strings.TrimSpace(e.Output)
+	if out != "" {
+		return fmt.Sprintf("%v: %s", e.Err, out)
+	}
+	return fmt.Sprintf("%v", e.Err)
+}
+
+func (e *GitError) Unwrap() error { return e.Err }
+
 func run(logger *zap.SugaredLogger, dir string, args ...string) (string, error) {
 	c := exec.Command("git", args...)
 	var output bytes.Buffer
@@ -54,7 +73,7 @@ func run(logger *zap.SugaredLogger, dir string, args ...string) (string, error) 
 	}
 	if err := c.Run(); err != nil {
 		logger.Errorf("Error running git %v: %v\n%v", args, err, output.String())
-		return "", err
+		return "", &GitError{Args: args, Dir: dir, Output: output.String(), Err: err}
 	}
 	return output.String(), nil
 }
@@ -201,11 +220,11 @@ func Fetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) e
 		retryConfig.MaxAttempts,
 		logger,
 	); err != nil {
-		return fmt.Errorf("failed to fetch %v: %v", fetchParam, err)
+		return fmt.Errorf("failed to fetch %v: %w", fetchParam, err)
 	}
 	// After performing a fetch, verify that the item to checkout is actually valid
 	if _, err := ShowCommit(logger, checkoutParam, spec.Path); err != nil {
-		return fmt.Errorf("error parsing %s after fetching refspec %s", checkoutParam, spec.Refspec)
+		return fmt.Errorf("error parsing %s after fetching refspec %s: %w", checkoutParam, spec.Refspec, err)
 	}
 
 	if _, err := run(logger, "", "checkout", "-f", checkoutParam); err != nil {
@@ -409,4 +428,90 @@ func retryWithBackoff[T any](
 		time.Sleep(wait)
 		waitTime += wait
 	}
+}
+
+var credentialURLPattern = regexp.MustCompile(`(https?://)([^@]+)@`)
+
+func redactCredentials(s string) string {
+	return credentialURLPattern.ReplaceAllString(s, "${1}****@")
+}
+
+type errorHint struct {
+	pattern string
+	hint    string
+}
+
+var errorHints = []errorHint{
+	{"could not read username", `The repository may be private. Configure a "basic-auth" or "ssh-directory" workspace to provide credentials.`},
+	{"authentication failed", `The provided credentials were rejected. Verify your "basic-auth" or "ssh-directory" workspace contains valid credentials.`},
+	{"permission denied (publickey)", `The SSH key was rejected. Ensure the "ssh-directory" workspace contains a valid private key with access to the repository.`},
+	{"repository not found", `The repository does not exist or you don't have access. Check the URL and ensure credentials are configured via "basic-auth" or "ssh-directory" workspace if the repository is private.`},
+	{"could not resolve host", `Cannot reach the git server. Check the URL for typos, verify network connectivity, and check "httpProxy"/"httpsProxy" settings if behind a proxy.`},
+	{"ssl certificate problem", `TLS/SSL verification failed. If using a self-signed certificate, provide it via the "ssl-ca-directory" workspace, or set "sslVerify" to "false" (not recommended).`},
+	{"server certificate verification failed", `TLS/SSL verification failed. If using a self-signed certificate, provide it via the "ssl-ca-directory" workspace, or set "sslVerify" to "false" (not recommended).`},
+	{"couldn't find remote ref", "The revision, branch, or tag was not found on the remote. Verify the name exists on the repository."},
+	{"upload-pack: not our ref", "The requested commit SHA does not exist on the remote. It may have been force-pushed over or garbage-collected."},
+	{"reference is not a tree", "The requested commit SHA does not exist on the remote. It may have been force-pushed over or garbage-collected."},
+	{"bad object", "The requested revision does not exist. It may have been force-pushed over or garbage-collected."},
+	{"connection refused", "The git server refused the connection. Verify the URL and that the server is reachable from the cluster."},
+	{"connection timed out", `Connection timed out. Check network/firewall rules and "httpProxy"/"httpsProxy"/"noProxy" settings.`},
+	{"failed to connect", `Cannot connect to the git server. Check network/firewall rules and "httpProxy"/"httpsProxy"/"noProxy" settings.`},
+	{"the remote end hung up unexpectedly", `Transfer was interrupted. Try increasing "retryMaxAttempts" or check network stability. For large repositories, consider using a shallow clone with "depth".`},
+	{"rpc failed", `Transfer was interrupted. Try increasing "retryMaxAttempts" or check network stability. For large repositories, consider using a shallow clone with "depth".`},
+	{"sparse checkout leaves no entry", `The sparse checkout pattern matched no files. Verify the "sparseCheckoutDirectories" parameter.`},
+	{"transport 'file' not allowed", "The git file:// protocol is blocked. This can happen with submodules pointing to local paths."},
+}
+
+// FormatUserFriendlyError produces a human-readable error message with
+// contextual hints and reproduction commands.
+func FormatUserFriendlyError(spec FetchSpec, err error) string {
+	var gitErr *GitError
+	var sb strings.Builder
+
+	sb.WriteString("\n========================================\n")
+	sb.WriteString("Git Clone Failed\n")
+	sb.WriteString("========================================\n\n")
+
+	errOutput := ""
+	if errors.As(err, &gitErr) {
+		errOutput = strings.TrimSpace(gitErr.Output)
+	}
+	if errOutput != "" {
+		sb.WriteString("Error:\n  " + redactCredentials(errOutput) + "\n\n")
+	} else {
+		sb.WriteString("Error:\n  " + redactCredentials(err.Error()) + "\n\n")
+	}
+
+	fullText := strings.ToLower(errOutput + " " + err.Error())
+	for _, h := range errorHints {
+		if strings.Contains(fullText, h.pattern) {
+			sb.WriteString("Hint:\n  " + h.hint + "\n\n")
+			break
+		}
+	}
+
+	url := redactCredentials(spec.URL)
+	sb.WriteString("To reproduce locally, run:\n\n")
+	sb.WriteString("  git init <dir> && cd <dir>\n")
+	sb.WriteString(fmt.Sprintf("  git remote add origin %s\n", url))
+
+	fetchCmd := "  git fetch origin"
+	if spec.Depth > 0 {
+		fetchCmd += fmt.Sprintf(" --depth=%d", spec.Depth)
+	}
+	if spec.Refspec != "" {
+		fetchCmd += " " + spec.Refspec
+	} else if spec.Revision != "" {
+		fetchCmd += " " + spec.Revision
+	}
+	sb.WriteString(fetchCmd + "\n")
+
+	if spec.Revision != "" {
+		sb.WriteString(fmt.Sprintf("  git checkout %s\n", spec.Revision))
+	} else {
+		sb.WriteString("  git checkout FETCH_HEAD\n")
+	}
+
+	sb.WriteString("\n========================================\n")
+	return sb.String()
 }
