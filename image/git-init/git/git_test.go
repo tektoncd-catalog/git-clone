@@ -205,7 +205,9 @@ func TestUserHasKnownHostsFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			homedir := t.TempDir()
 			if tt.wantKnownHostsFile {
-				os.MkdirAll(filepath.Join(homedir, ".ssh"), fileMode)
+				if err := os.MkdirAll(filepath.Join(homedir, ".ssh"), fileMode); err != nil {
+					t.Fatalf("Could not create .ssh dir: %v", err)
+				}
 				knownHostsFile := filepath.Join(homedir, sshKnownHostsUserPath)
 				_, err := os.Create(knownHostsFile)
 				if err != nil {
@@ -427,7 +429,7 @@ func TestFetch(t *testing.T) {
 				if err != nil {
 					t.Fatal("Unable to read sparse-checkout file")
 				}
-				defer sparseFile.Close()
+				defer func() { _ = sparseFile.Close() }()
 
 				var sparsePatterns []string
 
@@ -446,7 +448,7 @@ func TestFetch(t *testing.T) {
 				if err != nil {
 					t.Fatal("Faile to read shallow file")
 				}
-				defer shallowFile.Close()
+				defer func() { _ = shallowFile.Close() }()
 
 				var commitCount int
 				scanner := bufio.NewScanner(shallowFile)
