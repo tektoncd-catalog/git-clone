@@ -336,7 +336,7 @@ func userHasKnownHostsFile(homepath string) (bool, error) {
 		}
 		return false, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return true, nil
 }
 
@@ -381,7 +381,7 @@ func configSparseCheckout(logger *zap.SugaredLogger, spec FetchSpec) error {
 		}
 		for _, pattern := range dirPatterns {
 			if _, err := file.WriteString(pattern + "\n"); err != nil {
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 				logger.Errorf("failed to write to sparse-checkout file: %v", err)
 				return err
 			}
@@ -493,7 +493,7 @@ func FormatUserFriendlyError(spec FetchSpec, err error) string {
 	url := redactCredentials(spec.URL)
 	sb.WriteString("To reproduce locally, run:\n\n")
 	sb.WriteString("  git init <dir> && cd <dir>\n")
-	sb.WriteString(fmt.Sprintf("  git remote add origin %s\n", url))
+	fmt.Fprintf(&sb, "  git remote add origin %s\n", url)
 
 	fetchCmd := "  git fetch origin"
 	if spec.Depth > 0 {
@@ -507,7 +507,7 @@ func FormatUserFriendlyError(spec FetchSpec, err error) string {
 	sb.WriteString(fetchCmd + "\n")
 
 	if spec.Revision != "" {
-		sb.WriteString(fmt.Sprintf("  git checkout %s\n", spec.Revision))
+		fmt.Fprintf(&sb, "  git checkout %s\n", spec.Revision)
 	} else {
 		sb.WriteString("  git checkout FETCH_HEAD\n")
 	}
