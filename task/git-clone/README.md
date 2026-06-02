@@ -103,6 +103,7 @@ spec:
 * **httpsProxy**: HTTPS proxy server for SSL requests. (_default_: "")
 * **noProxy**: Opt out of proxying HTTP/HTTPS requests. (_default_: "")
 * **verbose**: Log the commands that are executed during `git-clone`'s operation. (_default_: true)
+* **userFriendlyErrors**: Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to `"false"` to disable. (_default_: true)
 * **sparseCheckoutDirectories**: Which directories to match or exclude when performing a sparse checkout (_default_: "")
 * **gitInitImage**: The image providing the git-init binary that this Task runs. (_default_: "ghcr.io/tektoncd-catalog/git-clone:v1.0.1")
 * **userHome**: The user's home directory. (_default_: "/tekton/home")

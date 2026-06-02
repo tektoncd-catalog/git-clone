@@ -19,6 +19,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -32,6 +33,7 @@ var (
 	fetchSpec              git.FetchSpec
 	retryConfig            git.RetryConfig
 	terminationMessagePath string
+	userFriendlyErrors     bool
 )
 
 func init() {
@@ -63,6 +65,7 @@ func init() {
 	flag.DurationVar(&retryConfig.Max, "retryMax", 10*time.Second, "Maximum retry duration for fetch operations")
 	flag.Float64Var(&retryConfig.Factor, "retryFactor", 2.0, "Retry factor for fetch operations")
 	flag.IntVar(&retryConfig.MaxAttempts, "retryMaxAttempts", 1, "Maximum number of retry attempts for fetch operations")
+	flag.BoolVar(&userFriendlyErrors, "userFriendlyErrors", true, "Print user-friendly error messages with reproduction commands on failure (set to false to disable)")
 }
 
 func main() {
@@ -74,6 +77,12 @@ func main() {
 	}()
 
 	if err := git.Fetch(logger, fetchSpec, retryConfig); err != nil {
+		if userFriendlyErrors {
+			logger.Errorf("Error fetching git repository: %s", err)
+			_ = logger.Sync()
+			fmt.Fprint(os.Stderr, git.FormatUserFriendlyError(fetchSpec, err))
+			os.Exit(1)
+		}
 		logger.Fatalf("Error fetching git repository: %s", err)
 	}
 
