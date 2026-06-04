@@ -29,6 +29,15 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+      - name: Verify StepAction is in sync
+        working-directory: .
+        run: |
+          ./hack/generate-stepaction.sh
+          if ! git diff --exit-code stepaction/; then
+            echo "StepAction is out of sync with Task. Run: ./hack/generate-stepaction.sh"
+            exit 1
+          fi
+
   e2e:
     name: E2E (${{ matrix.pipeline-version }})
     needs: [build]
