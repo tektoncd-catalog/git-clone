@@ -36,31 +36,29 @@ metadata:
     tekton.dev/catalog-url: https://github.com/tektoncd-catalog/git-clone
     tekton.dev/categories: Git
     tekton.dev/displayName: git clone
-    tekton.dev/pipelines.minVersion: 1.0.0
+    tekton.dev/pipelines.minVersion: "1.0.0"
     tekton.dev/platforms: linux/amd64,linux/s390x,linux/ppc64le,linux/arm64
-    tekton.dev/signature: MEYCIQD2ne687n9f3kW46OcppHMQMu7+j2LU9tosGd9Kc5QcYgIhAMq1uNF8VIUwu2K8w4ZDacCtPiyf8lFFBRrMVpKsUa1C
     tekton.dev/tags: git
-  labels:
-    app.kubernetes.io/version: "1.6.1"
-  name: git-clone
 spec:
-  description: >-
+  description: |-
+    This StepAction clones a git repository for use by other steps in your Pipeline.
+    It clones a repo from the provided url into the output path. By default the repo will be cloned into the root of the provided path. You can clone into a subdirectory by setting this StepAction's subdirectory param. This StepAction also supports sparse checkouts. To perform a sparse checkout, pass a list of comma separated directory patterns to this StepAction's sparseCheckoutDirectories param.
   params:
-    - name: output-path
-      description: The git repo will be cloned onto this path.
-      type: string
-    - name: ssh-directory-path
-      description: |
-        A .ssh directory with private key, known_hosts, config, etc.
-      default: ""
-    - name: basic-auth-path
-      description: |
-        A directory path containing a .gitconfig and .git-credentials file.
-      default: ""
-    - name: ssl-ca-directory-path
-      description: |
-        A directory containing CA certificates for HTTPS verification.
-      default: ""
+  - name: output-path
+    description: The git repo will be cloned onto this path.
+    type: string
+  - name: ssh-directory-path
+    description: |
+      A .ssh directory with private key, known_hosts, config, etc.
+    default: ""
+  - name: basic-auth-path
+    description: |
+      A directory path containing a .gitconfig and .git-credentials file.
+    default: ""
+  - name: ssl-ca-directory-path
+    description: |
+      A directory containing CA certificates for HTTPS verification.
+    default: ""
   - description: Repository URL to clone from.
     name: url
     type: string
@@ -146,10 +144,10 @@ spec:
     name: url
   - description: The epoch timestamp of the commit that was fetched by this StepAction.
     name: committer-date
-  image: "$(params.gitInitImage)"
+  image: $(params.gitInitImage)
   env:
   - name: HOME
-    value: "$(params.userHome)"
+    value: $(params.userHome)
   - name: PARAM_URL
     value: $(params.url)
   - name: PARAM_REVISION
@@ -196,3 +194,80 @@ spec:
     runAsNonRoot: true
     runAsUser: 65532
   script: |
+    #!/bin/sh
+    set -eu
+
+    if [ "${PARAM_VERBOSE}" = "true" ] ; then
+      set -x
+    fi
+
+    # Ensure the user home directory exists (it may not in minimal images)
+    mkdir -p "${PARAM_USER_HOME}"
+
+    if [ "${PARAM_BASIC_AUTH_DIRECTORY_PATH}" != "" ] ; then
+      cp "${PARAM_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
+      cp "${PARAM_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" "${PARAM_USER_HOME}/.gitconfig"
+      chmod 400 "${PARAM_USER_HOME}/.git-credentials"
+      chmod 400 "${PARAM_USER_HOME}/.gitconfig"
+    fi
+
+    if [ "${PARAM_SSH_DIRECTORY_PATH}" != "" ] ; then
+      cp -R "${PARAM_SSH_DIRECTORY_PATH}" "${PARAM_USER_HOME}"/.ssh
+      chmod 700 "${PARAM_USER_HOME}"/.ssh
+      chmod -R 400 "${PARAM_USER_HOME}"/.ssh/*
+    fi
+
+    if [ "${PARAM_SSL_CA_DIRECTORY_PATH}" != "" ] ; then
+       export GIT_SSL_CAPATH="${PARAM_SSL_CA_DIRECTORY_PATH}"
+       if [ "${PARAM_CRT_FILENAME}" != "" ] ; then
+          export GIT_SSL_CAINFO="${PARAM_SSL_CA_DIRECTORY_PATH}/${PARAM_CRT_FILENAME}"
+       fi
+    fi
+    CHECKOUT_DIR="${PARAM_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+
+    cleandir() {
+      # Delete any existing contents of the repo directory if it exists.
+      #
+      # We don't just "rm -rf ${CHECKOUT_DIR}" because ${CHECKOUT_DIR} might be "/"
+      # or the root of a mounted volume.
+      if [ -d "${CHECKOUT_DIR}" ] ; then
+        # Delete non-hidden files and directories
+        rm -rf "${CHECKOUT_DIR:?}"/*
+        # Delete files and directories starting with . but excluding ..
+        rm -rf "${CHECKOUT_DIR}"/.[!.]*
+        # Delete files and directories starting with .. plus any other character
+        rm -rf "${CHECKOUT_DIR}"/..?*
+      fi
+    }
+
+    if [ "${PARAM_DELETE_EXISTING}" = "true" ] ; then
+      cleandir || true
+    fi
+
+    test -z "${PARAM_HTTP_PROXY}" || export HTTP_PROXY="${PARAM_HTTP_PROXY}"
+    test -z "${PARAM_HTTPS_PROXY}" || export HTTPS_PROXY="${PARAM_HTTPS_PROXY}"
+    test -z "${PARAM_NO_PROXY}" || export NO_PROXY="${PARAM_NO_PROXY}"
+
+    git config --global --add safe.directory "${PARAM_OUTPUT_PATH}"
+
+    /ko-app/git-init \
+      -url="${PARAM_URL}" \
+      -revision="${PARAM_REVISION}" \
+      -refspec="${PARAM_REFSPEC}" \
+      -path="${CHECKOUT_DIR}" \
+      -sslVerify="${PARAM_SSL_VERIFY}" \
+      -submodules="${PARAM_SUBMODULES}" \
+      -depth="${PARAM_DEPTH}" \
+      -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}" \
+      -submodulePaths="${PARAM_SUBMODULE_PATHS}" \
+      -userFriendlyErrors="${PARAM_USER_FRIENDLY_ERRORS}"
+    cd "${CHECKOUT_DIR}"
+    RESULT_SHA="$(git rev-parse HEAD)"
+    EXIT_CODE="$?"
+    if [ "${EXIT_CODE}" != 0 ] ; then
+      exit "${EXIT_CODE}"
+    fi
+    RESULT_COMMITTER_DATE="$(git log -1 --pretty=%ct)"
+    printf "%s" "${RESULT_COMMITTER_DATE}" > "$(step.results.committer-date.path)"
+    printf "%s" "${RESULT_SHA}" > "$(step.results.commit.path)"
+    printf "%s" "${PARAM_URL}" > "$(step.results.url.path)"

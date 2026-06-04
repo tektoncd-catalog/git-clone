@@ -32,6 +32,13 @@ if [[ ! -f "${TASK_FILE}" ]]; then
     exit 1
 fi
 
-python3 "${SCRIPT_DIR}/generate-stepaction.py" "${TASK_FILE}" "${STEPACTION_FILE}"
+if python3 -c 'import yaml' 2>/dev/null; then
+    python3 "${SCRIPT_DIR}/generate-stepaction.py" "${TASK_FILE}" "${STEPACTION_FILE}"
+elif command -v uv &>/dev/null; then
+    uv tool run --with pyyaml python3 "${SCRIPT_DIR}/generate-stepaction.py" "${TASK_FILE}" "${STEPACTION_FILE}"
+else
+    echo "Error: pyyaml not available. Install with: pip install pyyaml"
+    exit 1
+fi
 
 echo "Generated ${STEPACTION_FILE}"
