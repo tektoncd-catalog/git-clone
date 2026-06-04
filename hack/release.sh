@@ -153,17 +153,23 @@ Output the two sections separated by the exact string ---SEPARATOR--- on its own
     fi
 fi
 
+# Sanitize description for Artifact Hub YAML (strip {}[]&*#?|-<>=!%@ or quote)
+sanitize_desc() {
+    echo "$1" | sed 's/[{}]//g; s/[][&*#?|<>=!%@`]//g' | sed 's/  */ /g' | sed 's/^ //;s/ $//'
+}
+
 if [[ "${USE_LLM}" != true ]]; then
     # Generate simple changelog from commit types
     AH_CHANGES=""
     while IFS= read -r line; do
         msg="${line#* }"  # strip commit hash
+        desc=""
         case "${msg}" in
-            feat:*|feat\(*) AH_CHANGES="${AH_CHANGES}      - kind: added\n        description: ${msg#*: }\n" ;;
-            fix:*|fix\(*)   AH_CHANGES="${AH_CHANGES}      - kind: fixed\n        description: ${msg#*: }\n" ;;
-            chore:*|ci:*|build*) AH_CHANGES="${AH_CHANGES}      - kind: changed\n        description: ${msg#*: }\n" ;;
-            docs:*)         AH_CHANGES="${AH_CHANGES}      - kind: changed\n        description: ${msg#*: }\n" ;;
-            *)              AH_CHANGES="${AH_CHANGES}      - kind: changed\n        description: ${msg}\n" ;;
+            feat:*|feat\(*) desc=$(sanitize_desc "${msg#*: }"); AH_CHANGES="${AH_CHANGES}      - kind: added\n        description: ${desc}\n" ;;
+            fix:*|fix\(*)   desc=$(sanitize_desc "${msg#*: }"); AH_CHANGES="${AH_CHANGES}      - kind: fixed\n        description: ${desc}\n" ;;
+            chore:*|ci:*|build*) desc=$(sanitize_desc "${msg#*: }"); AH_CHANGES="${AH_CHANGES}      - kind: changed\n        description: ${desc}\n" ;;
+            docs:*)         desc=$(sanitize_desc "${msg#*: }"); AH_CHANGES="${AH_CHANGES}      - kind: changed\n        description: ${desc}\n" ;;
+            *)              desc=$(sanitize_desc "${msg}"); AH_CHANGES="${AH_CHANGES}      - kind: changed\n        description: ${desc}\n" ;;
         esac
     done <<< "${COMMITS}"
 
