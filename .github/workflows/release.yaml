@@ -95,7 +95,7 @@ jobs:
     with:
       base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
       upload-assets: true
-      upload-tag-name: "${{ needs.release.outputs.tag_name }}"
+      upload-tag-name: "${{ needs.goreleaser.outputs.tag_name }}"
 
   verification:
     needs:
@@ -113,11 +113,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh -R slsa-framework/slsa-verifier release download v1.3.2 -p "slsa-verifier-linux-amd64"
+          gh -R slsa-framework/slsa-verifier release download v2.7.1 -p "slsa-verifier-linux-amd64"
           chmod ug+x slsa-verifier-linux-amd64
           # Note: see https://github.com/slsa-framework/slsa-verifier/blob/main/SHA256SUM.md
           COMPUTED_HASH=$(sha256sum slsa-verifier-linux-amd64 | cut -d ' ' -f1)
-          EXPECTED_HASH="b1d6c9bbce6274e253f0be33158cacd7fb894c5ebd643f14a911bfe55574f4c0"
+          EXPECTED_HASH="946dbec729094195e88ef78e1734324a27869f03e2c6bd2f61cbc06bd5350339"
           if [[ "$EXPECTED_HASH" != "$COMPUTED_HASH" ]];then
               echo "error: expected $EXPECTED_HASH, computed $COMPUTED_HASH"
               exit 1
@@ -145,9 +145,9 @@ jobs:
               fn=$(echo $line | cut -d ' ' -f2)
 
               echo "Verifying $fn"
-              ./slsa-verifier-linux-amd64 -artifact-path "$fn" \
-                                      -provenance "$PROVENANCE" \
-                                      -source "github.com/$GITHUB_REPOSITORY" \
-                                      -tag "$GITHUB_REF_NAME"
+              ./slsa-verifier-linux-amd64 verify-artifact "$fn" \
+                                      --provenance-path "$PROVENANCE" \
+                                      --source-uri "github.com/$GITHUB_REPOSITORY" \
+                                      --source-tag "$GITHUB_REF_NAME"
 
           done <<<"$checksums"
