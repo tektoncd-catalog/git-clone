@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: validate-tag-sha
@@ -59,7 +59,7 @@ spec:
             echo "Revision $(params.revision-name) has expected SHA $(params.expected-sha)."
           fi
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   generateName: using-git-clone-result-

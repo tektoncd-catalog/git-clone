@@ -1,5 +1,5 @@
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-noargs
@@ -16,7 +16,7 @@ spec:
     - name: url
       value: https://github.com/kelseyhightower/nocode
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-tag
@@ -35,7 +35,7 @@ spec:
     - name: revision
       value: 1.0.0
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-no-submodules
@@ -54,7 +54,7 @@ spec:
     - name: submodules
       value: "false"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-submodules-with-paths
@@ -73,7 +73,7 @@ spec:
     - name: submodulePaths
       value: "js"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-no-depth-2
@@ -92,7 +92,7 @@ spec:
     - name: depth
       value: "2"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-sslverify-none
@@ -111,7 +111,7 @@ spec:
     - name: sslVerify
       value: "false"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-ssl-cadirectory-empty
@@ -132,7 +132,7 @@ spec:
     - name: crtFileName
       value: ""
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-subdirectory
@@ -151,7 +151,7 @@ spec:
     - name: subdirectory
       value: "hellomoto"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-delete-existing
@@ -170,7 +170,7 @@ spec:
     - name: deleteExisting
       value: "true"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-run-without-verbose
@@ -189,7 +189,7 @@ spec:
     - name: verbose
       value: "false"
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
   name: git-clone-sparse

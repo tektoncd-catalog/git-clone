@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: cat-readme
@@ -53,7 +53,7 @@ spec:
           #!/usr/bin/env zsh
           cat $(workspaces.source.path)/README.md
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   name: git-clone-checking-out-a-branch

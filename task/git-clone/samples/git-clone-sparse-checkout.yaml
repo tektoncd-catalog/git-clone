@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: sparse-checkout-list-dir
@@ -53,7 +53,7 @@ spec:
           #!/usr/bin/env zsh
           ls -R $(workspaces.source.path)/
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   name: git-clone-sparse-checkout
