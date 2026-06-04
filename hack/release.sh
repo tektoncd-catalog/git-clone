@@ -154,15 +154,12 @@ Output the two sections separated by the exact string ---SEPARATOR--- on its own
 fi
 
 # Sanitize description for Artifact Hub YAML (strip {}[]&*#?|-<>=!%@ or quote)
+# Sanitize and always quote description for Artifact Hub YAML-in-YAML
+# AH parses the changes |block as YAML, so descriptions must be quoted
 sanitize_desc() {
     local d
     d=$(echo "$1" | sed 's/[{}]//g; s/[][&*#?|<>=!%@`]//g' | sed 's/  */ /g' | sed 's/^ //;s/ $//')
-    # Quote if it contains colons (YAML special char)
-    if echo "$d" | grep -qF ':'; then
-        echo "\"${d}\""
-    else
-        echo "$d"
-    fi
+    echo "\"${d}\""
 }
 
 if [[ "${USE_LLM}" != true ]]; then
@@ -215,20 +212,11 @@ apply_version_bumps() {
 
 # --- Helper: update artifacthub changelog in content (stdin → stdout) ---
 apply_ah_changes() {
-    local normalized
-    normalized=$(echo -e "${AH_CHANGES}" | grep -v '^[[:space:]]*```' | sed -e 's/^[[:space:]]*- kind:/      - kind:/' -e 's/^[[:space:]]*description:/        description:/')
-    python3 -c "
-import re, sys
-content = sys.stdin.read()
-new_changes = '''    artifacthub.io/changes: |
-${normalized}'''
-content = re.sub(
-    r'    artifacthub\.io/changes: \|\n(      .*\n)*',
-    new_changes.rstrip() + '\n',
-    content,
-)
-sys.stdout.write(content)
-"
+    local tmpchanges
+    tmpchanges=$(mktemp)
+    echo -e "${AH_CHANGES}" > "${tmpchanges}"
+    python3 "${SCRIPT_DIR}/apply-ah-changes.py" "${tmpchanges}"
+    rm -f "${tmpchanges}"
 }
 
 if [[ "${DRY_RUN}" == true ]]; then
