@@ -255,6 +255,11 @@ echo "--- Signing task YAMLs with ${SIGNING_KEY}..."
 for f in "${TASK_FILES[@]}"; do
     echo "  Signing ${f}"
     tkn task sign "${f}" -K="${SIGNING_KEY}" -f="${f}"
+    # Workaround: tkn task sign adds empty 'resources: {}' to steps (from
+    # Kubernetes Container spec), which causes strict decoding errors on apply.
+    # Strip it after signing.
+    # TODO: remove once https://github.com/tektoncd/cli/issues/2894 is fixed
+    sed -i '/^    resources: {}$/d' "${f}"
 done
 
 echo "--- Committing..."
