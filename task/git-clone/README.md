@@ -1,270 +1,145 @@
 # `git-clone`
 
-**Note: this Task is only compatible with Tekton Pipelines versions 0.29.0 and greater!**
+This `Task` clones a git repository into a Workspace. It supports:
 
-**Note: this Task is not backwards compatible with the previous versions as it is now run as a non-root user!**
+- Branch, tag, SHA, and refspec checkout
+- Shallow clones
+- Submodules (full or selective)
+- Sparse checkouts
+- SSH, basic auth, and custom CA authentication
+- HTTP/HTTPS proxy configuration
+- User-friendly error messages with actionable hints
 
-This `Task` has two required inputs:
+## Requirements
 
-1. The URL of a git repo to clone provided with the `url` param.
-2. A Workspace called `output`.
-
-The `git-clone` `Task` will clone a repo from the provided `url` into the
-`output` Workspace. By default the repo will be cloned into the root of
-your Workspace. You can clone into a subdirectory by setting this `Task`'s
-`subdirectory` param. If the directory where the repo will be cloned is
-already populated then by default the contents will be deleted before the
-clone takes place. This behaviour can be disabled by setting the
-`deleteExisting` param to `"false"`.
-
-**Note**: The `git-clone` Task is run as nonroot. The files cloned on to the `output`
-workspace will end up owned by user 65532.
+- Tekton Pipelines **v1.0.0** or later
+- Runs as **non-root** (UID 65532)
 
 ## Workspaces
 
-**Note**: This task is run as a non-root user with UID 65532 and GID 65532.
-Generally, the default permissions for storage volumes are configured for the
-root user. To make the volumes accessible by the non-root user, you will need
-to either configure the permissions manually or set the `fsGroup` field under
-`PodSecurityContext` in your TaskRun or PipelineRun.
+> **Note**: This task runs as UID 65532. You may need to set `fsGroup: 65532`
+> in your `podTemplate.securityContext` to make workspace volumes writable.
 
-An example PipelineRun will look like:
-```yaml
-apiVersion: tekton.dev/v1beta1
-kind: PipelineRun
-metadata:
-  generateName: git-clone-
-spec:
-  pipelineRef:
-    name: git-clone-pipeline
-  podTemplate:
-    securityContext:
-      fsGroup: 65532
-...
-...
-```
+| Workspace | Required | Description |
+|-----------|----------|-------------|
+| `output` | Yes | The git repo will be cloned here |
+| `ssh-directory` | No | `.ssh` directory with private key, `known_hosts`, `config`. Bind a `Secret`. |
+| `basic-auth` | No | Directory with `.gitconfig` and `.git-credentials` files. Bind a `Secret`. |
+| `ssl-ca-directory` | No | Directory with CA certificates for HTTPS verification |
 
-An example TaskRun will look like:
+Example with `fsGroup`:
+
 ```yaml
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: TaskRun
 metadata:
-  name: taskrun
+  name: clone-repo
 spec:
   taskRef:
     name: git-clone
   podTemplate:
     securityContext:
       fsGroup: 65532
-...
-...
+  workspaces:
+    - name: output
+      persistentVolumeClaim:
+        claimName: my-pvc
+  params:
+    - name: url
+      value: https://github.com/tektoncd-catalog/git-clone
 ```
-
-* **output**: A workspace for this Task to fetch the git repository in to.
-* **ssh-directory**: An optional workspace to provide SSH credentials. At
-  minimum this should include a private key but can also include other common
-  files from `.ssh` including `config` and `known_hosts`. It is **strongly**
-  recommended that this workspace be bound to a Kubernetes `Secret`.
-
-* **ssl-ca-directory**: An optional workspace to provide custom CA certificates.
-  Like the /etc/ssl/certs path this directory can have any pem or cert files,
-  this uses libcurl ssl capath directive. See this SO answer here
-  https://stackoverflow.com/a/9880236 on how it works.
-
-* **basic-auth**: An optional workspace containing `.gitconfig` and
-  `.git-credentials` files. This allows username/password/access token to be
-  provided for basic auth.
-
-  It is **strongly** recommended that this workspace be bound to a Kubernetes
-  `Secret`. For details on the correct format of the files in this Workspace
-  see [Using basic-auth Credentials](#using-basic-auth-credentials) below.
-
-  **Note**: Settings provided as part of a `.gitconfig` file can affect the
-  execution of `git` in ways that conflict with the parameters of this Task.
-  For example, specifying proxy settings in `.gitconfig` could conflict with
-  the `httpProxy` and `httpsProxy` parameters this Task provides. Nothing
-  prevents you setting these parameters but it is not advised.
 
 ## Parameters
 
-* **url**: Repository URL to clone from. (_required_)
-* **revision**: Revision to checkout. (branch, tag, sha, ref, etc...) (_default_: "")
-* **refspec**: Refspec to fetch before checking out revision. (_default_:"")
-* **submodules**: Initialize and fetch git submodules. (_default_: true)
-* **submodulePaths**: Comma-separated list of specific submodule paths to initialize and fetch.
- Only submodules in the specified directories and their subdirectories will be fetched.
- Empty string fetches all submodules. Parameter `submodules` must be set to `true` to make this parameter applicable.  (_default_:"")
-* **depth**: Perform a shallow clone, fetching only the most recent N commits. (_default_: 1)
-* **sslVerify**: Set the `http.sslVerify` global git config. Setting this to `false` is not advised unless you are sure that you trust your git remote. (_default_: true)
-* **crtFileName**: If `sslVerify` is **true** and `ssl-ca-directory` workspace is given then set `crtFileName` if mounted file name is different than `ca-bundle.crt`. (_default_: "ca-bundle.crt")
-* **subdirectory**: Subdirectory inside the `output` workspace to clone the repo into. (_default:_ "")
-* **deleteExisting**: Clean out the contents of the destination directory if it already exists before cloning. (_default_: true)
-* **httpProxy**: HTTP proxy server for non-SSL requests. (_default_: "")
-* **httpsProxy**: HTTPS proxy server for SSL requests. (_default_: "")
-* **noProxy**: Opt out of proxying HTTP/HTTPS requests. (_default_: "")
-* **verbose**: Log the commands that are executed during `git-clone`'s operation. (_default_: true)
-* **userFriendlyErrors**: Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to `"false"` to disable. (_default_: true)
-* **sparseCheckoutDirectories**: Which directories to match or exclude when performing a sparse checkout (_default_: "")
-* **gitInitImage**: The image providing the git-init binary that this Task runs. (_default_: "ghcr.io/tektoncd-catalog/git-clone:v1.0.1")
-* **userHome**: The user's home directory. (_default_: "/tekton/home")
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `url` | Repository URL to clone from | _(required)_ |
+| `revision` | Revision to checkout (branch, tag, sha, ref…) | `""` |
+| `refspec` | Refspec to fetch before checking out revision | `""` |
+| `submodules` | Initialize and fetch git submodules | `"true"` |
+| `submodulePaths` | Comma-separated list of submodule paths to fetch | `""` |
+| `depth` | Shallow clone depth | `"1"` |
+| `sslVerify` | Set `http.sslVerify` global git config | `"true"` |
+| `crtFileName` | Certificate file name in `ssl-ca-directory` workspace | `"ca-bundle.crt"` |
+| `subdirectory` | Subdirectory inside the `output` Workspace to clone into | `""` |
+| `sparseCheckoutDirectories` | Directory patterns for sparse checkout | `""` |
+| `deleteExisting` | Clean destination directory before cloning | `"true"` |
+| `httpProxy` | HTTP proxy server for non-SSL requests | `""` |
+| `httpsProxy` | HTTPS proxy server for SSL requests | `""` |
+| `noProxy` | Opt out of proxying HTTP/HTTPS requests | `""` |
+| `verbose` | Log the commands executed during operation | `"true"` |
+| `userFriendlyErrors` | Print user-friendly error messages with hints | `"true"` |
+| `gitInitImage` | The image providing the `git-init` binary | `"ghcr.io/tektoncd-catalog/git-clone:v1.5.0"` |
+| `userHome` | Absolute path to the user's home directory | `"/tekton/home"` |
 
 ## Results
 
-* **commit**: The precise commit SHA that was fetched by this Task
-* **url**: The precise URL that was fetched by this Task
+| Result | Description |
+|--------|-------------|
+| `commit` | The precise commit SHA that was fetched |
+| `url` | The precise URL that was fetched |
+| `committer-date` | The epoch timestamp of the fetched commit |
 
 ## Platforms
 
-The Task can be run on `linux/amd64`, `linux/s390x`, `linux/arm64`, and `linux/ppc64le` platforms.
+`linux/amd64`, `linux/s390x`, `linux/arm64`, `linux/ppc64le`
 
 ## Usage
 
-If the `revision` is not provided in the param of the taskrun
-then it will auto-detect the branch as specified by the `default`
-in the respective git repository.
+If `revision` is not provided, the default branch of the repository is used.
 
-The following pipelines demonstrate usage of the git-clone Task:
+### Samples
 
 - [Cloning a branch](./samples/git-clone-checking-out-a-branch.yaml)
-- [Checking out a specific git commit](./samples/git-clone-checking-out-a-commit.yaml)
-- [Checking out a git tag and using the "commit" Task Result](./samples/using-git-clone-result.yaml)
+- [Checking out a specific commit](./samples/git-clone-checking-out-a-commit.yaml)
+- [Using the "commit" result](./samples/using-git-clone-result.yaml)
+- [Sparse checkout](./samples/git-clone-sparse-checkout.yaml)
 
-## Cloning Private Repositories
+## Authentication
 
-This Task supports fetching private repositories. There are three ways to
-authenticate:
+### SSH credentials (recommended)
 
-1. The simplest approach is to bind an `ssh-directory` workspace to this
-Task. The workspace should contain private keys (e.g. `id_rsa`), `config`
-and `known_hosts` files - anything you need to interact with your git remote
-via SSH. It's **strongly** recommended that you use Kubernetes `Secrets` to
-hold your credentials and bind to this workspace.
+Bind an `ssh-directory` workspace to a `Secret` containing your SSH keys:
 
-    In a TaskRun that would look something like this:
+```yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: my-ssh-credentials
+data:
+  id_rsa: # ... base64-encoded private key ...
+  known_hosts: # ... base64-encoded known_hosts file ...
+  config: # ... base64-encoded ssh config file ...
+```
 
-    ```yaml
-    kind: TaskRun
-    spec:
-      workspaces:
+```yaml
+# In a TaskRun:
+workspaces:
+  - name: ssh-directory
+    secret:
+      secretName: my-ssh-credentials
+
+# In a Pipeline:
+tasks:
+  - name: fetch-source
+    taskRef:
+      name: git-clone
+    workspaces:
       - name: ssh-directory
-        secret:
-          secretName: my-ssh-credentials
-    ```
+        workspace: ssh-creds
+```
 
-    And in a Pipeline and PipelineRun it would look like this:
+Including `known_hosts` is optional but strongly recommended. Without it
+the task will blindly accept the remote server's identity.
 
-    ```yaml
-    kind: Pipeline
-    spec:
-      workspaces:
-      - name: ssh-creds
-      # ...
-      tasks:
-      - name: fetch-source
-        taskRef:
-          name: git-clone
-        workspaces:
-        - name: ssh-directory
-          workspace: ssh-creds
-      # ...
-    ---
-    kind: PipelineRun
-    spec:
-      workspaces:
-      - name: ssh-creds
-        secret:
-          secretName: my-ssh-credentials
-      # ...
-    ```
+### Basic auth (username/password/token)
 
-    The `Secret` would appear the same in both cases - structured like a `.ssh`
-    directory:
+> **Note**: Prefer SSH credentials when available. For basic auth, generate a
+> short-lived token from your platform (GitHub, GitLab, Bitbucket, etc.) and
+> use `git` as the username.
 
-    ```yaml
-    kind: Secret
-    apiVersion: v1
-    metadata:
-      name: my-ssh-credentials
-    data:
-      id_rsa: # ... base64-encoded private key ...
-      known_hosts: # ... base64-encoded known_hosts file ...
-      config: # ... base64-encoded ssh config file ...
-    ```
-
-    Including `known_hosts` is optional but strongly recommended. Without it
-    the `git-clone` Task will blindly accept the remote server's identity.
-
-2. Use Tekton Pipelines' built-in credentials support as [documented in
-Pipelines' auth.md](https://github.com/tektoncd/pipeline/blob/master/docs/auth.md).
-
-3. Another approach is to bind an `ssl-ca-directory` workspace to this
-Task. The workspace should contain crt keys (e.g. `ca-bundle.crt`)files - anything you need to interact with your git remote
-via custom CA . It's **strongly** recommended that you use Kubernetes `Secrets` to
-hold your credentials and bind to this workspace.
-
-    In a TaskRun that would look something like this:
-
-    ```yaml
-    kind: TaskRun
-    spec:
-      workspaces:
-      - name: ssl-ca-directory
-        secret:
-          secretName: my-ssl-credentials
-    ```
-
-    And in a Pipeline and PipelineRun it would look like this:
-
-    ```yaml
-    kind: Pipeline
-    spec:
-      workspaces:
-      - name: ssl-creds
-      # ...
-      tasks:
-      - name: fetch-source
-        taskRef:
-          name: git-clone
-        workspaces:
-        - name: ssl-ca-directory
-          workspace: ssl-creds
-      # ...
-    ---
-    kind: PipelineRun
-    spec:
-      workspaces:
-      - name: ssl-creds
-        secret:
-          secretName: my-ssl-credentials
-      # ...
-    ```
-
-    The `Secret` would appear like below:
-
-    ```yaml
-    kind: Secret
-    apiVersion: v1
-    metadata:
-      name: my-ssl-credentials
-    data:
-      ca-bundle.crt: # ... base64-encoded crt ...  # If key/filename is other than ca-bundle.crt then set crtFileName param as explained under Parameters section
-    ```
-
-## Using basic-auth Credentials
-
-**Note**: It is strongly advised that you use `ssh` credentials when the option
-is available to you before using basic auth. You can use generate a short
-lived token from WebVCS platforms (Github, Gitlab, Bitbucket etc..) to be use
-as password and generally be able to use `git` as the username.
-On bitbucket server the token may have a / into it so you would need
-to urlquote them before in the `Secret`, see this stackoverflow answer :
-
-https://stackoverflow.com/a/24719496 
-
-To support basic-auth this Task exposes an optional `basic-auth` Workspace.
-The bound Workspace must contain a `.gitconfig` and `.git-credentials` file.
-Any other files on this Workspace are ignored. A typical `Secret` containing
-these credentials looks as follows:
+Bind a `basic-auth` workspace to a `Secret` containing `.gitconfig` and
+`.git-credentials`:
 
 ```yaml
 kind: Secret
@@ -280,3 +155,40 @@ stringData:
     https://<user>:<pass>@<hostname>
 ```
 
+```yaml
+workspaces:
+  - name: basic-auth
+    secret:
+      secretName: my-basic-auth-secret
+```
+
+> **Note**: Settings in `.gitconfig` can conflict with task parameters (e.g.
+> proxy settings). Use task parameters instead when possible.
+
+### Custom CA certificates
+
+Bind an `ssl-ca-directory` workspace to a `Secret` containing your CA bundle:
+
+```yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: my-ssl-credentials
+data:
+  ca-bundle.crt: # ... base64-encoded certificate ...
+```
+
+```yaml
+workspaces:
+  - name: ssl-ca-directory
+    secret:
+      secretName: my-ssl-credentials
+```
+
+If the certificate file is named something other than `ca-bundle.crt`, set the
+`crtFileName` parameter accordingly.
+
+### Tekton built-in credentials
+
+You can also use Tekton Pipelines' built-in credential support as documented in
+[Pipelines auth.md](https://github.com/tektoncd/pipeline/blob/main/docs/auth.md).
