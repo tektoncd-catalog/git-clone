@@ -68,7 +68,7 @@ metadata:
     tekton.dev/signature: MEUCIC5LgzmksNwwh2nsfuo/xFKHpJSorDSSNr4427Y1lNfFAiEA7A5TTUa4/4CdP5mFlLond12A4EdEBG53bC/9Vj4nric=
     tekton.dev/tags: git
   labels:
-    app.kubernetes.io/version: 1.6.0
+    app.kubernetes.io/version: "1.5.0"
   name: git-clone
 spec:
   description: |-
@@ -144,7 +144,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.0
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.5.0
     description: The image providing the git-init binary that this Task runs.
     name: gitInitImage
     type: string

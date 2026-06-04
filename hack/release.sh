@@ -155,7 +155,14 @@ fi
 
 # Sanitize description for Artifact Hub YAML (strip {}[]&*#?|-<>=!%@ or quote)
 sanitize_desc() {
-    echo "$1" | sed 's/[{}]//g; s/[][&*#?|<>=!%@`]//g' | sed 's/  */ /g' | sed 's/^ //;s/ $//'
+    local d
+    d=$(echo "$1" | sed 's/[{}]//g; s/[][&*#?|<>=!%@`]//g' | sed 's/  */ /g' | sed 's/^ //;s/ $//')
+    # Quote if it contains colons (YAML special char)
+    if echo "$d" | grep -qF ':'; then
+        echo "\"${d}\""
+    else
+        echo "$d"
+    fi
 }
 
 if [[ "${USE_LLM}" != true ]]; then
