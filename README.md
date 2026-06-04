@@ -1,59 +1,99 @@
-# git-clone
-
 # Git Clone Task for Tekton
 
-This repository contains the git-clone Task for Tekton Pipelines, providing Git repository cloning capabilities.
+This repository contains the `git-clone` Task for [Tekton Pipelines](https://tekton.dev/), providing Git repository cloning capabilities.
 
-## Recent Fixes
+The `git-clone` Task clones a repo from the provided URL into the output Workspace.
+By default the repo is cloned into the root of the Workspace. You can clone into a
+subdirectory by setting the `subdirectory` param. This Task also supports sparse
+checkouts via the `sparseCheckoutDirectories` param.
 
-### Git Remote Origin Error Fix
+## Installation
 
-**Problem**: The git-clone task was logging an error message:
+Install the Task:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/tektoncd-catalog/git-clone/main/task/git-clone/git-clone.yaml
 ```
-Error running git [remote get-url origin]: exit status 2
-error: No such remote 'origin'
+
+## Usage
+
+### Basic clone
+
+```yaml
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: git-clone-run-
+spec:
+  pipelineSpec:
+    workspaces:
+      - name: shared-data
+    tasks:
+      - name: fetch-source
+        taskRef:
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: shared-data
+        params:
+          - name: url
+            value: https://github.com/tektoncd-catalog/git-clone
+  workspaces:
+    - name: shared-data
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
 ```
 
-This occurred because the original code tried to check if the "origin" remote existed using `git remote get-url origin`, which fails on fresh repositories where no remotes exist yet.
+## Parameters
 
-**Solution**: The code now:
-1. Uses `git remote` to safely list existing remotes (this command never fails)
-2. Checks if "origin" is in the list of existing remotes
-3. If the remote exists, updates its URL using `git remote set-url`
-4. If the remote doesn't exist, adds it using `git remote add`
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `url` | Repository URL to clone from | _(required)_ |
+| `revision` | Revision to checkout (branch, tag, sha, ref…) | `""` |
+| `refspec` | Refspec to fetch before checking out revision | `""` |
+| `submodules` | Initialize and fetch git submodules | `"true"` |
+| `submodulePaths` | Comma-separated list of submodule paths to fetch | `""` |
+| `depth` | Shallow clone depth | `"1"` |
+| `sslVerify` | Set `http.sslVerify` global git config | `"true"` |
+| `crtFileName` | Certificate file name in `ssl-ca-directory` workspace | `"ca-bundle.crt"` |
+| `subdirectory` | Subdirectory inside the `output` Workspace to clone into | `""` |
+| `sparseCheckoutDirectories` | Directory patterns for sparse checkout | `""` |
+| `deleteExisting` | Clean destination directory before cloning | `"true"` |
+| `httpProxy` | HTTP proxy server for non-SSL requests | `""` |
+| `httpsProxy` | HTTPS proxy server for SSL requests | `""` |
+| `noProxy` | Opt out of proxying HTTP/HTTPS requests | `""` |
+| `verbose` | Log the commands executed during operation | `"true"` |
+| `userFriendlyErrors` | Print user-friendly error messages with hints | `"true"` |
+| `gitInitImage` | The image providing the `git-init` binary | `"ghcr.io/tektoncd-catalog/git-clone:v1.1.0"` |
+| `userHome` | Absolute path to the user's home directory | `"/home/git"` |
 
-This approach completely eliminates error logging while maintaining all functionality for both fresh repositories and reused workspaces.
+## Workspaces
 
-**Files Modified**: 
-- `image/git-init/git/git.go` - Updated the `fetchOrigin` function with robust remote handling
+| Workspace | Description | Optional |
+|-----------|-------------|----------|
+| `output` | The git repo will be cloned onto the volume backing this Workspace | No |
+| `ssh-directory` | A `.ssh` directory with private key, `known_hosts`, config, etc. | Yes |
+| `basic-auth` | A Workspace containing `.gitconfig` and `.git-credentials` files | Yes |
+| `ssl-ca-directory` | A workspace containing CA certificates for HTTPS verification | Yes |
 
-**Benefits**:
-- Eliminates spurious error messages in pipeline logs
-- Works correctly with both fresh repositories and reused workspaces  
-- Maintains backward compatibility
-- Provides cleaner, more reliable git operations
+## Results
+
+| Result | Description |
+|--------|-------------|
+| `commit` | The precise commit SHA that was fetched |
+| `url` | The precise URL that was fetched |
+| `committer-date` | The epoch timestamp of the fetched commit |
 
 ## Building
 
-To build the updated git-init binary:
+To build the `git-init` image:
+
 ```bash
 cd image/git-init
 ko build --local .
 ```
-
-## Testing
-
-The fix handles these scenarios correctly:
-- Fresh repository: `git remote add origin <URL>` succeeds ✅
-- Reused workspace with same URL: `git remote add` fails → `git remote set-url` succeeds ✅
-- Reused workspace with different URL: `git remote add` fails → `git remote set-url` updates URL ✅
-- Invalid configuration: Both operations fail → reports actual error ✅
-
-## Image Reference:
-```
-ttl.sh/git-init-4025e1c5f1230d5d5dc600e50e1bdbad@sha256:8cf5621926dab695e3ab03777529b680ba812ff3b7ec9cd6610770c2828e5255
-```
-
-## Where to use it:
-
-Let me check the
