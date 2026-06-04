@@ -1,0 +1,9 @@
+# Artifact Hub repository metadata file
+repositoryID: # will be filled after first scan
+owners:
+  - name: Vincent Demeester
+    email: vincent@sbr.pm
+  - name: zhangquan
+    email: zhangquan@google.com
+  - name: vinamra2807
+    email: jvinamra776@gmail.com

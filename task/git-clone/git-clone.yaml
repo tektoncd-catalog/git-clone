@@ -3,13 +3,16 @@ kind: Task
 metadata:
   name: git-clone
   labels:
-    app.kubernetes.io/version: "1.3"
+    app.kubernetes.io/version: "1.3.0"
   annotations:
     tekton.dev/pipelines.minVersion: "0.53.0"
     tekton.dev/categories: Git
     tekton.dev/tags: git
     tekton.dev/displayName: "git clone"
     tekton.dev/platforms: "linux/amd64,linux/s390x,linux/ppc64le,linux/arm64"
+    tekton.dev/catalog: tektoncd.git-clone
+    tekton.dev/catalog-support-tier: verified
+    tekton.dev/catalog-url: https://github.com/tektoncd-catalog/git-clone
 spec:
   description: >-
     These Tasks are Git tasks to work with repositories used by other tasks
