@@ -29,7 +29,7 @@ kos:
   - id: git-init-image
     build: binary
     main: .
-    base_image: golang:1.25
+    base_image: ghcr.io/tektoncd/plumbing/alpine-git-nonroot:latest
     platforms:
       - all
     tags:
