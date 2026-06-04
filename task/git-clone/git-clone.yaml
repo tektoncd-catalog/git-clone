@@ -13,6 +13,28 @@ metadata:
     tekton.dev/catalog: tektoncd.git-clone
     tekton.dev/catalog-support-tier: verified
     tekton.dev/catalog-url: https://github.com/tektoncd-catalog/git-clone
+    artifacthub.io/category: integration-delivery
+    artifacthub.io/license: Apache-2.0
+    artifacthub.io/provider: Tekton
+    artifacthub.io/maintainers: |
+      - name: Vincent Demeester
+        email: vincent@sbr.pm
+      - name: vinamra28
+        email: jvinamra776@gmail.com
+    artifacthub.io/links: |
+      - name: support
+        url: https://github.com/tektoncd-catalog/git-clone/issues
+    artifacthub.io/changes: |
+      - kind: added
+        description: User-friendly error messages with actionable hints
+      - kind: added
+        description: Selective submodule fetching via submodulePaths param
+      - kind: changed
+        description: Drop tektoncd/pipeline dependency (binary 45MB to 7MB)
+      - kind: fixed
+        description: Shallow clones with submodules
+      - kind: fixed
+        description: Release workflow (slsa-verifier v2)
 spec:
   description: >-
     These Tasks are Git tasks to work with repositories used by other tasks
