@@ -246,10 +246,12 @@ for f in "${ALL_FILES[@]}"; do
     fi
 done
 
-echo "--- Regenerating StepAction..."
+echo "--- Regenerating StepAction (before signing, from clean YAML)..."
 ./hack/generate-stepaction.sh
 
-# --- Sign task YAMLs ---
+# --- Sign task YAMLs (must be AFTER stepaction generation) ---
+# tkn task sign rewrites YAML structure, so the StepAction must be
+# generated from the clean pre-signed Task.
 echo "--- Signing task YAMLs with ${SIGNING_KEY}..."
 for f in "${TASK_FILES[@]}"; do
     echo "  Signing ${f}"
