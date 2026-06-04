@@ -24,7 +24,7 @@ metadata:
       - kind: fixed
         description: Fixed changelog normalization to correctly strip backticks in release notes.
       - kind: fixed
-        description: Removed spurious `resources: {}` blocks from signed Task YAML outputs.
+        description: "Removed spurious resources blocks from signed Task YAML outputs."
     artifacthub.io/license: Apache-2.0
     artifacthub.io/links: |
       - name: support
