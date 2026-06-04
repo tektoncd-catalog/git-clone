@@ -29,7 +29,7 @@ kos:
   - id: git-init-image
     build: binary
     main: .
-    base_image: ghcr.io/tektoncd/plumbing/alpine-git-nonroot:latest
+    base_image: ghcr.io/tektoncd-catalog/git-clone/base:latest
     platforms:
       - all
     tags:

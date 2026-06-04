@@ -59,9 +59,15 @@ jobs:
           cluster_name: kind
           wait: 120s
 
+      - name: Build base image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/base:latest image/base/
+          docker tag ghcr.io/${{ github.repository }}/base:latest ko.local/git-clone-base:latest
+
       - name: Build and load image into Kind
         env:
           KO_DOCKER_REPO: kind.local
+          KO_DEFAULTBASEIMAGE: ko.local/git-clone-base:latest
         run: |
           cd image/git-init
           ko build --sbom=none -B -t e2e .
@@ -95,9 +101,15 @@ jobs:
           cluster_name: kind
           wait: 120s
 
+      - name: Build base image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/base:latest image/base/
+          docker tag ghcr.io/${{ github.repository }}/base:latest ko.local/git-clone-base:latest
+
       - name: Build and load image into Kind
         env:
           KO_DOCKER_REPO: kind.local
+          KO_DEFAULTBASEIMAGE: ko.local/git-clone-base:latest
         run: |
           cd image/git-init
           ko build --sbom=none -B -t e2e .

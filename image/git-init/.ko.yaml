@@ -1,1 +1,1 @@
-defaultBaseImage: ghcr.io/tektoncd/plumbing/alpine-git-nonroot:latest
+defaultBaseImage: ghcr.io/tektoncd-catalog/git-clone/base:latest
