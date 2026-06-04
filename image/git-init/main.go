@@ -24,8 +24,7 @@ import (
 	"time"
 
 	"github.com/tektoncd-catalog/git-clone/git-init/git"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"github.com/tektoncd/pipeline/pkg/termination"
+	"github.com/tektoncd-catalog/git-clone/git-init/termination"
 	"go.uber.org/zap"
 )
 
@@ -90,7 +89,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf("Error parsing revision %s of git repository: %s", fetchSpec.Revision, err)
 	}
-	output := []v1beta1.PipelineResourceResult{
+	output := []termination.Result{
 		{
 			Key:   "commit",
 			Value: commit,
