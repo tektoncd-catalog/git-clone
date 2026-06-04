@@ -5,7 +5,7 @@ kind: StepAction
 metadata:
   name: git-clone
   labels:
-    app.kubernetes.io/version: "1.6.1"
+    app.kubernetes.io/version: "1.5.0"
   annotations:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
@@ -128,7 +128,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.1
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.5.0
     description: The image providing the git-init binary that this StepAction runs.
     name: gitInitImage
     type: string
