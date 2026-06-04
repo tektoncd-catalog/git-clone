@@ -182,7 +182,6 @@ spec:
       value: $(workspaces.ssl-ca-directory.path)
     image: $(params.gitInitImage)
     name: clone
-    resources: {}
     script: |
       #!/bin/sh
       set -eu
