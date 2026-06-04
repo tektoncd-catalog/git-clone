@@ -1,5 +1,5 @@
 # Artifact Hub repository metadata file
-repositoryID: # will be filled after first scan
+repositoryID: 53c3afa1-4728-4d58-afbf-ed47449abff0
 owners:
   - name: Vincent Demeester
     email: vincent@sbr.pm
