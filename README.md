@@ -11,10 +11,24 @@ checkouts via the `sparseCheckoutDirectories` param.
 
 ## Installation
 
-Install the Task:
+Install the Task directly:
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/tektoncd-catalog/git-clone/main/task/git-clone/git-clone.yaml
+```
+
+Or use the [Tekton Bundle](https://tekton.dev/docs/pipelines/tekton-bundle-contracts/) with the bundle resolver:
+
+```yaml
+taskRef:
+  resolver: bundles
+  params:
+    - name: bundle
+      value: ghcr.io/tektoncd-catalog/git-clone/bundle:v1.4.0
+    - name: name
+      value: git-clone
+    - name: kind
+      value: task
 ```
 
 ## Usage

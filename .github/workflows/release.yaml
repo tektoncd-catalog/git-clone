@@ -55,6 +55,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Push Tekton Bundle
+        uses: tektoncd/actions/setup-tektoncd-cli@dd92514472167b361de1c95fd31fc2ef83c282ec # main
+
+      - name: Publish Tekton Bundle
+        working-directory: .
+        env:
+          GIT_TAG: ${{ steps.tag.outputs.tag_name }}
+          REGISTRY: "ghcr.io/${{ github.repository }}"
+        run: |
+          tkn bundle push "${REGISTRY}/bundle:${GIT_TAG}" \
+            -f task/git-clone/git-clone.yaml
+          tkn bundle push "${REGISTRY}/bundle:latest" \
+            -f task/git-clone/git-clone.yaml
+
+      - name: Sign Tekton Bundle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_TAG: ${{ steps.tag.outputs.tag_name }}
+          REGISTRY: "ghcr.io/${{ github.repository }}"
+        run: |
+          digest=$(crane digest "${REGISTRY}/bundle:${GIT_TAG}")
+          cosign sign --yes \
+              -a GIT_HASH="${{ github.sha }}" \
+              -a GIT_TAG="${GIT_TAG}" \
+              "${REGISTRY}/bundle@${digest}"
+
       - name: sign ko-image
         run: |
           digest=$(crane digest "${REGISTRY}":"${GIT_TAG}")
