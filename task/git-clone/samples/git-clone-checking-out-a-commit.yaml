@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: checking-out-a-revision
@@ -88,7 +88,7 @@ spec:
             echo "Saw README with owner of $detectedUID as expected."
           fi
 ---
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
   generateName: git-clone-checking-out-a-commit-

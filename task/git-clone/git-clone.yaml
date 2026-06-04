@@ -137,7 +137,7 @@ spec:
       description: |
         Absolute path to the user's home directory.
       type: string
-      default: "/home/git"
+      default: "/tekton/home"
   results:
     - name: commit
       description: The precise commit SHA that was fetched by this Task.
@@ -203,12 +203,15 @@ spec:
         runAsNonRoot: true
         runAsUser: 65532
       script: |
-        #!/usr/bin/env sh
+        #!/bin/sh
         set -eu
 
         if [ "${PARAM_VERBOSE}" = "true" ] ; then
           set -x
         fi
+
+        # Ensure the user home directory exists (it may not in minimal images)
+        mkdir -p "${PARAM_USER_HOME}"
 
         if [ "${WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND}" = "true" ] ; then
           cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
