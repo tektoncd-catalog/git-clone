@@ -9,7 +9,7 @@ metadata:
   annotations:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
-- kind: fixed
+      - kind: fixed
         description: "always quote descriptions in AH changelog"
       - kind: changed
         description: "bump version to v1.6.0"
@@ -49,18 +49,6 @@ metadata:
         description: "bump version to v1.6.0"
       - kind: fixed
         description: "release script backtick stripping in changelog normalization"
-      - kind: changed
-        description: "add task signing to release script"
-      - kind: changed
-        description: "add parameters and results tables to StepAction README"
-      - kind: added
-        description: "stepaction tests, bundle publishing, release integration"
-      - kind: changed
-        description: "update READMEs for Artifact Hub and StepAction"
-      - kind: added
-        description: "add git-clone StepAction, generated from Task"
-      - kind: changed
-        description: "add task signing public key"
     artifacthub.io/license: Apache-2.0
     artifacthub.io/links: |
       - name: support
