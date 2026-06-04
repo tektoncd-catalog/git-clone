@@ -31,7 +31,7 @@ import (
 	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/tektoncd/pipeline/pkg/apis/pipeline"
+
 	"go.uber.org/zap"
 )
 
@@ -112,7 +112,7 @@ func Fetch(logger *zap.SugaredLogger, spec FetchSpec, retryConfig RetryConfig) e
 		homepath = "/root"
 	}
 	ensureHomeEnv(logger, homepath)
-	validateGitAuth(logger, pipeline.CredsDir, spec.URL)
+	validateGitAuth(logger, "/tekton/creds", spec.URL)
 
 	if spec.Path != "" {
 		if _, err := run(logger, "", "init", spec.Path); err != nil {
