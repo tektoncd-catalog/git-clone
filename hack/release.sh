@@ -20,6 +20,9 @@
 #   ./hack/release.sh v1.5.0              # bump, commit, tag, push
 #   ./hack/release.sh v1.5.0 --dry-run    # show what would change
 #   ./hack/release.sh v1.5.0 --llm        # generate changelog with gh copilot
+#
+# Environment variables:
+#   SIGNING_KEY  - Path to ECDSA private key for signing tasks (default: keys/signing-key.pem)
 
 set -euo pipefail
 
@@ -30,6 +33,7 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 VERSION=""
 DRY_RUN=false
 USE_LLM=false
+SIGNING_KEY="${SIGNING_KEY:-${ROOT_DIR}/keys/signing-key.pem}"
 
 for arg in "$@"; do
     case "${arg}" in
@@ -46,6 +50,20 @@ if [[ -z "${VERSION}" ]]; then
     exit 1
 fi
 
+# Check signing key
+if [[ ! -f "${SIGNING_KEY}" ]]; then
+    echo "Error: signing key not found at ${SIGNING_KEY}"
+    echo "  Set SIGNING_KEY env var or place key at keys/signing-key.pem"
+    echo "  Generate with: openssl ecparam -genkey -name prime256v1 -noout -out keys/signing-key.pem"
+    exit 1
+fi
+
+# Check tkn CLI
+if ! command -v tkn &>/dev/null; then
+    echo "Error: tkn CLI not found. Install from https://tekton.dev/docs/cli/"
+    exit 1
+fi
+
 # Validate version format
 if ! echo "${VERSION}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
     echo "Error: version must match vX.Y.Z (got: ${VERSION})"
@@ -56,6 +74,12 @@ fi
 BARE_VERSION="${VERSION#v}"
 
 cd "${ROOT_DIR}"
+
+# --- Task files to sign ---
+TASK_FILES=(
+    "task/git-clone/git-clone.yaml"
+    "stepaction/git-clone/git-clone.yaml"
+)
 
 # --- Detect current version ---
 CURRENT_VERSION=$(grep 'app.kubernetes.io/version' task/git-clone/git-clone.yaml | head -1 | sed 's/.*"\(.*\)"/\1/')
@@ -122,7 +146,6 @@ Output the two sections separated by the exact string ---SEPARATOR--- on its own
     LLM_OUTPUT=$(gh copilot -p "${PROMPT}" 2>/dev/null || echo "")
 
     if [[ -n "${LLM_OUTPUT}" ]]; then
-        # Extract the two sections, stripping any preamble before the YAML
         AH_CHANGES=$(echo "${LLM_OUTPUT}" | sed -n '/^ *- kind:/,/---SEPARATOR---/p' | grep -v '^---SEPARATOR---')
         TAG_MESSAGE=$(echo "${LLM_OUTPUT}" | sed -n '/^---SEPARATOR---$/,$ p' | tail -n +2 | sed '/^$/d; /^[[:space:]]*$/d' | sed '1{/^$/d}')
     else
@@ -159,14 +182,11 @@ echo "--- Tag message:"
 echo "${TAG_MESSAGE}"
 echo ""
 
-# --- Files to update ---
-FILES=(
-    "task/git-clone/git-clone.yaml"
-    "README.md"
-)
+# --- All files to update ---
+ALL_FILES=("${TASK_FILES[@]}" "README.md")
 
 echo "--- Version bumps:"
-for f in "${FILES[@]}"; do
+for f in "${ALL_FILES[@]}"; do
     echo "  ${f}"
 done
 echo ""
@@ -183,11 +203,13 @@ apply_version_bumps() {
 
 # --- Helper: update artifacthub changelog in content (stdin → stdout) ---
 apply_ah_changes() {
+    local normalized
+    normalized=$(echo -e "${AH_CHANGES}" | grep -v '^[[:space:]]*\`\`\`' | sed -e 's/^[[:space:]]*- kind:/      - kind:/' -e 's/^[[:space:]]*description:/        description:/')
     python3 -c "
 import re, sys
 content = sys.stdin.read()
 new_changes = '''    artifacthub.io/changes: |
-$(echo -e "${AH_CHANGES}")'''
+${normalized}'''
 content = re.sub(
     r'    artifacthub\.io/changes: \|\n(      .*\n)*',
     new_changes.rstrip() + '\n',
@@ -200,10 +222,10 @@ sys.stdout.write(content)
 if [[ "${DRY_RUN}" == true ]]; then
     echo "--- Dry run: showing changes ---"
 
-    for f in "${FILES[@]}"; do
+    for f in "${ALL_FILES[@]}"; do
         echo ""
         echo "=== ${f} ==="
-        if [[ "${f}" == *"git-clone.yaml" ]]; then
+        if [[ "${f}" == *".yaml" ]]; then
             apply_version_bumps "${f}" | apply_ah_changes | diff -u "${f}" - || true
         else
             apply_version_bumps "${f}" | diff -u "${f}" - || true
@@ -217,8 +239,8 @@ fi
 # --- Apply version bumps ---
 echo "--- Applying version bumps..."
 
-for f in "${FILES[@]}"; do
-    if [[ "${f}" == *"git-clone.yaml" ]]; then
+for f in "${ALL_FILES[@]}"; do
+    if [[ "${f}" == *".yaml" ]]; then
         apply_version_bumps "${f}" | apply_ah_changes > "${f}.tmp" && mv "${f}.tmp" "${f}"
     else
         apply_version_bumps "${f}" > "${f}.tmp" && mv "${f}.tmp" "${f}"
@@ -228,8 +250,15 @@ done
 echo "--- Regenerating StepAction..."
 ./hack/generate-stepaction.sh
 
+# --- Sign task YAMLs ---
+echo "--- Signing task YAMLs with ${SIGNING_KEY}..."
+for f in "${TASK_FILES[@]}"; do
+    echo "  Signing ${f}"
+    tkn task sign "${f}" -K="${SIGNING_KEY}" -f="${f}"
+done
+
 echo "--- Committing..."
-git add task/git-clone/git-clone.yaml README.md stepaction/git-clone/git-clone.yaml
+git add "${ALL_FILES[@]}"
 git commit --signoff --message "chore: bump version to ${VERSION}"
 
 echo "--- Pushing to main..."
