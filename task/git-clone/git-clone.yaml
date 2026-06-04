@@ -5,6 +5,10 @@ metadata:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
       - kind: fixed
+        description: quote descriptions containing colons in changelog
+      - kind: changed
+        description: bump version to v1.6.0
+      - kind: fixed
         description: sanitize special YAML chars in changelog descriptions
       - kind: changed
         description: bump version to v1.6.0
@@ -25,9 +29,9 @@ metadata:
       - kind: fixed
         description: release script version detection and signing
       - kind: fixed
-        description: strip spurious resources: from signed task YAMLs
+        description: "strip spurious resources: from signed task YAMLs"
       - kind: fixed
-        description: strip spurious resources: from signed task YAML
+        description: "strip spurious resources: from signed task YAML"
       - kind: changed
         description: set Artifact Hub repository ID for StepAction
       - kind: changed
@@ -65,10 +69,10 @@ metadata:
     tekton.dev/displayName: git clone
     tekton.dev/pipelines.minVersion: 1.0.0
     tekton.dev/platforms: linux/amd64,linux/s390x,linux/ppc64le,linux/arm64
-    tekton.dev/signature: MEUCIC5LgzmksNwwh2nsfuo/xFKHpJSorDSSNr4427Y1lNfFAiEA7A5TTUa4/4CdP5mFlLond12A4EdEBG53bC/9Vj4nric=
+    tekton.dev/signature: MEYCIQCm/4td/qSjle4l8U0yihk1ONgg6Mr4suUJj24kLKwOdgIhALTuOKknf7fJObtkUb/6ggEjovHDh3ITCNJwRMGuJuKy
     tekton.dev/tags: git
   labels:
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: 1.6.0
   name: git-clone
 spec:
   description: |-
@@ -144,7 +148,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.5.0
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.0
     description: The image providing the git-init binary that this Task runs.
     name: gitInitImage
     type: string
