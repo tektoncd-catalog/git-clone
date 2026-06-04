@@ -4,18 +4,22 @@ metadata:
   annotations:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
-      - kind: fixed
-        description: release script signing and bundle workflow
-      - kind: fixed
-        description: release script version detection and signing
-      - kind: fixed
-        description: strip spurious resources: {} from signed task YAMLs
-      - kind: fixed
-        description: strip spurious resources: {} from signed task YAML
+      - kind: added
+        description: Added a new git-clone StepAction generated from the existing Task.
+      - kind: added
+        description: Added StepAction tests and integrated StepAction bundle publishing into releases.
       - kind: changed
-        description: set Artifact Hub repository ID for StepAction
+        description: Updated release automation to sign published Task/StepAction artifacts.
       - kind: changed
-        description: add Artifact Hub metadata for StepAction repository
+        description: Rewrote the StepAction generator implementation to use PyYAML.
+      - kind: changed
+        description: Added Artifact Hub metadata and repository ID support for StepAction artifacts.
+      - kind: fixed
+        description: Fixed release script version detection and signing workflow behavior.
+      - kind: fixed
+        description: Fixed changelog normalization to correctly strip backticks in release notes.
+      - kind: fixed
+        description: Removed spurious `resources: {}` blocks from signed Task YAML outputs.
     artifacthub.io/license: Apache-2.0
     artifacthub.io/links: |
       - name: support
@@ -33,10 +37,10 @@ metadata:
     tekton.dev/displayName: git clone
     tekton.dev/pipelines.minVersion: 1.0.0
     tekton.dev/platforms: linux/amd64,linux/s390x,linux/ppc64le,linux/arm64
-    tekton.dev/signature: MEUCIHnHqhYc0TCdI0THZqZis3CEvOdyAsRTV7cN/lc7F0fPAiEAztvz5/7Frmwiu58wcfaUtRad7geXouOUIcXwQZ0tcfE=
+    tekton.dev/signature: MEUCICL1RH2AA+nz2VbG5uMqv/MeRqsiFLR6RqzkDvjs+DnLAiEAkAtjBYYep9K0ookACnun3QU+FJxojRXaH6TbbYtbK1E=
     tekton.dev/tags: git
   labels:
-    app.kubernetes.io/version: "1.5.0"
+    app.kubernetes.io/version: 1.6.0
   name: git-clone
 spec:
   description: |-
@@ -112,7 +116,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.5.0
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.0
     description: The image providing the git-init binary that this Task runs.
     name: gitInitImage
     type: string
