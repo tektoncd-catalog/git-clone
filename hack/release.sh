@@ -75,14 +75,13 @@ BARE_VERSION="${VERSION#v}"
 
 cd "${ROOT_DIR}"
 
-# --- Task files to sign ---
+# --- Task files to sign (tkn task sign only supports Task, not StepAction) ---
 TASK_FILES=(
     "task/git-clone/git-clone.yaml"
-    "stepaction/git-clone/git-clone.yaml"
 )
 
 # --- Detect current version ---
-CURRENT_VERSION=$(grep 'app.kubernetes.io/version' task/git-clone/git-clone.yaml | head -1 | sed 's/.*"\(.*\)"/\1/')
+CURRENT_VERSION=$(grep 'app.kubernetes.io/version' task/git-clone/git-clone.yaml | head -1 | sed 's/.*version: *"\?\([0-9][0-9.]*\)"\?/\1/')
 CURRENT_TAG="v${CURRENT_VERSION}"
 
 echo "=== Release ${VERSION} ==="
@@ -183,7 +182,7 @@ echo "${TAG_MESSAGE}"
 echo ""
 
 # --- All files to update ---
-ALL_FILES=("${TASK_FILES[@]}" "README.md")
+ALL_FILES=("${TASK_FILES[@]}" "stepaction/git-clone/git-clone.yaml" "README.md")
 
 echo "--- Version bumps:"
 for f in "${ALL_FILES[@]}"; do
@@ -195,7 +194,7 @@ echo ""
 apply_version_bumps() {
     local f="$1"
     sed \
-        -e "s|app.kubernetes.io/version: \"${CURRENT_VERSION}\"|app.kubernetes.io/version: \"${BARE_VERSION}\"|g" \
+        -e "s|app.kubernetes.io/version: *\"\?${CURRENT_VERSION}\"\?|app.kubernetes.io/version: \"${BARE_VERSION}\"|g" \
         -e "s|ghcr.io/tektoncd-catalog/git-clone:${CURRENT_TAG}|ghcr.io/tektoncd-catalog/git-clone:${VERSION}|g" \
         -e "s|ghcr.io/tektoncd-catalog/git-clone/bundle:${CURRENT_TAG}|ghcr.io/tektoncd-catalog/git-clone/bundle:${VERSION}|g" \
         "${f}"
