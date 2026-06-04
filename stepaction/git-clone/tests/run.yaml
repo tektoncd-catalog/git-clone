@@ -1,0 +1,73 @@
+---
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-clone-stepaction-noargs
+spec:
+  taskSpec:
+    workspaces:
+      - name: output
+    steps:
+      - ref:
+          name: git-clone
+        params:
+          - name: url
+            value: https://github.com/kelseyhightower/nocode
+          - name: output-path
+            value: $(workspaces.output.path)
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+    - name: output
+      emptyDir: {}
+---
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-clone-stepaction-tag
+spec:
+  taskSpec:
+    workspaces:
+      - name: output
+    steps:
+      - ref:
+          name: git-clone
+        params:
+          - name: url
+            value: https://github.com/kelseyhightower/nocode
+          - name: revision
+            value: "1.0.0"
+          - name: output-path
+            value: $(workspaces.output.path)
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+    - name: output
+      emptyDir: {}
+---
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-clone-stepaction-subdirectory
+spec:
+  taskSpec:
+    workspaces:
+      - name: output
+    steps:
+      - ref:
+          name: git-clone
+        params:
+          - name: url
+            value: https://github.com/kelseyhightower/nocode
+          - name: output-path
+            value: $(workspaces.output.path)
+          - name: subdirectory
+            value: "subdir"
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+    - name: output
+      emptyDir: {}
