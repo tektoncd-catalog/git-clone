@@ -204,7 +204,7 @@ apply_version_bumps() {
 # --- Helper: update artifacthub changelog in content (stdin → stdout) ---
 apply_ah_changes() {
     local normalized
-    normalized=$(echo -e "${AH_CHANGES}" | grep -v '^[[:space:]]*\`\`\`' | sed -e 's/^[[:space:]]*- kind:/      - kind:/' -e 's/^[[:space:]]*description:/        description:/')
+    normalized=$(echo -e "${AH_CHANGES}" | grep -v '^[[:space:]]*```' | sed -e 's/^[[:space:]]*- kind:/      - kind:/' -e 's/^[[:space:]]*description:/        description:/')
     python3 -c "
 import re, sys
 content = sys.stdin.read()
