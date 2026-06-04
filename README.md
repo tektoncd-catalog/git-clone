@@ -24,7 +24,7 @@ taskRef:
   resolver: bundles
   params:
     - name: bundle
-      value: ghcr.io/tektoncd-catalog/git-clone/bundle:v1.4.0
+      value: ghcr.io/tektoncd-catalog/git-clone/bundle:v1.5.0
     - name: name
       value: git-clone
     - name: kind
@@ -85,7 +85,7 @@ spec:
 | `noProxy` | Opt out of proxying HTTP/HTTPS requests | `""` |
 | `verbose` | Log the commands executed during operation | `"true"` |
 | `userFriendlyErrors` | Print user-friendly error messages with hints | `"true"` |
-| `gitInitImage` | The image providing the `git-init` binary | `"ghcr.io/tektoncd-catalog/git-clone:v1.4.0"` |
+| `gitInitImage` | The image providing the `git-init` binary | `"ghcr.io/tektoncd-catalog/git-clone:v1.5.0"` |
 | `userHome` | Absolute path to the user's home directory | `"/home/git"` |
 
 ## Workspaces

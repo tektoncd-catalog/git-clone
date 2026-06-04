@@ -3,7 +3,7 @@ kind: Task
 metadata:
   name: git-clone
   labels:
-    app.kubernetes.io/version: "1.4.0"
+    app.kubernetes.io/version: "1.5.0"
   annotations:
     tekton.dev/pipelines.minVersion: "1.0.0"
     tekton.dev/categories: Git
@@ -25,10 +25,20 @@ metadata:
       - name: support
         url: https://github.com/tektoncd-catalog/git-clone/issues
     artifacthub.io/changes: |
-      - kind: changed
-        description: Update task API from v1beta1 to v1
       - kind: added
-        description: Artifact Hub listing with verified publisher metadata
+        description: Added a custom git-clone base image with git-lfs, openssh, and non-root UID 65532.
+      - kind: added
+        description: Added Tekton Bundle publishing as part of the release process.
+      - kind: added
+        description: Added end-to-end test coverage using a Kind cluster.
+      - kind: fixed
+        description: Switched release builds to the chainguard/git base image.
+      - kind: changed
+        description: Added a release automation script and updated task minimum version requirements.
+      - kind: changed
+        description: Updated CI/release dependencies (docker/login-action, docker/build-push-action, helm/kind-action).
+      - kind: changed
+        description: Added a pull request template and stabilized CI test configuration.
 spec:
   description: >-
     These Tasks are Git tasks to work with repositories used by other tasks
@@ -132,7 +142,7 @@ spec:
     - name: gitInitImage
       description: The image providing the git-init binary that this Task runs.
       type: string
-      default: "ghcr.io/tektoncd-catalog/git-clone:v1.4.0"
+      default: "ghcr.io/tektoncd-catalog/git-clone:v1.5.0"
     - name: userHome
       description: |
         Absolute path to the user's home directory.
