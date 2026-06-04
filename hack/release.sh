@@ -225,8 +225,11 @@ for f in "${FILES[@]}"; do
     fi
 done
 
+echo "--- Regenerating StepAction..."
+./hack/generate-stepaction.sh
+
 echo "--- Committing..."
-git add task/git-clone/git-clone.yaml README.md
+git add task/git-clone/git-clone.yaml README.md stepaction/git-clone/git-clone.yaml
 git commit --signoff --message "chore: bump version to ${VERSION}"
 
 echo "--- Pushing to main..."

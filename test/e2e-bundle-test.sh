@@ -41,18 +41,22 @@ echo "--- Waiting for Tekton Pipelines to be ready"
 kubectl wait --for=condition=available --timeout=120s deployment/tekton-pipelines-controller -n tekton-pipelines
 kubectl wait --for=condition=available --timeout=120s deployment/tekton-pipelines-webhook -n tekton-pipelines
 
-# Prepare the task YAML (with optional image override)
+# Prepare YAMLs (with optional image override)
 TASK_YAML=$(mktemp)
+STEPACTION_YAML=$(mktemp)
 if [[ -n "${GIT_INIT_IMAGE:-}" ]]; then
     echo "    Using locally built image: ${GIT_INIT_IMAGE}"
     sed "s|ghcr.io/tektoncd-catalog/git-clone:[^ \"]*|${GIT_INIT_IMAGE}|g" \
         "${ROOT_DIR}/task/git-clone/git-clone.yaml" > "${TASK_YAML}"
+    sed "s|ghcr.io/tektoncd-catalog/git-clone:[^ \"]*|${GIT_INIT_IMAGE}|g" \
+        "${ROOT_DIR}/stepaction/git-clone/git-clone.yaml" > "${STEPACTION_YAML}"
 else
     cp "${ROOT_DIR}/task/git-clone/git-clone.yaml" "${TASK_YAML}"
+    cp "${ROOT_DIR}/stepaction/git-clone/git-clone.yaml" "${STEPACTION_YAML}"
 fi
 
 echo "--- Pushing Tekton Bundle to ${BUNDLE_REF}"
-tkn bundle push "${BUNDLE_REF}" -f "${TASK_YAML}"
+tkn bundle push "${BUNDLE_REF}" -f "${TASK_YAML}" -f "${STEPACTION_YAML}"
 
 echo "--- Creating TaskRun using bundle resolver"
 cat <<EOF | kubectl apply -f -
@@ -81,20 +85,76 @@ spec:
       value: https://github.com/kelseyhightower/nocode
 EOF
 
-echo "--- Waiting for TaskRun to complete (timeout: ${TIMEOUT})"
+FAILED=0
+
+echo "--- Waiting for Task bundle test (timeout: ${TIMEOUT})"
 if kubectl wait --for=condition=Succeeded --timeout="${TIMEOUT}" taskrun/git-clone-bundle-test 2>/dev/null; then
-    echo ""
-    echo "=== Bundle test PASSED ==="
+    echo "  Task bundle test PASSED"
 else
-    echo ""
-    echo "=== Bundle test FAILED ==="
+    echo "  Task bundle test FAILED"
     kubectl get taskrun/git-clone-bundle-test -o jsonpath='{.status.conditions[*].message}' 2>/dev/null || true
     echo ""
     pod=$(kubectl get taskrun/git-clone-bundle-test -o jsonpath='{.status.podName}' 2>/dev/null)
     if [[ -n "${pod}" ]]; then
         kubectl logs "${pod}" --all-containers 2>/dev/null || true
     fi
+    FAILED=1
+fi
+
+echo "--- Creating TaskRun using StepAction bundle resolver"
+cat <<EOF | kubectl apply -f -
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-clone-stepaction-bundle-test
+spec:
+  taskSpec:
+    workspaces:
+      - name: output
+    steps:
+      - ref:
+          resolver: bundles
+          params:
+            - name: bundle
+              value: ${BUNDLE_REF}
+            - name: name
+              value: git-clone
+            - name: kind
+              value: stepaction
+        params:
+          - name: url
+            value: https://github.com/kelseyhightower/nocode
+          - name: output-path
+            value: \$(workspaces.output.path)
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+    - name: output
+      emptyDir: {}
+EOF
+
+echo "--- Waiting for StepAction bundle test (timeout: ${TIMEOUT})"
+if kubectl wait --for=condition=Succeeded --timeout="${TIMEOUT}" taskrun/git-clone-stepaction-bundle-test 2>/dev/null; then
+    echo "  StepAction bundle test PASSED"
+else
+    echo "  StepAction bundle test FAILED"
+    kubectl get taskrun/git-clone-stepaction-bundle-test -o jsonpath='{.status.conditions[*].message}' 2>/dev/null || true
+    echo ""
+    pod=$(kubectl get taskrun/git-clone-stepaction-bundle-test -o jsonpath='{.status.podName}' 2>/dev/null)
+    if [[ -n "${pod}" ]]; then
+        kubectl logs "${pod}" --all-containers 2>/dev/null || true
+    fi
+    FAILED=1
+fi
+
+rm -f "${TASK_YAML}" "${STEPACTION_YAML}"
+
+if [[ ${FAILED} -gt 0 ]]; then
+    echo ""
+    echo "=== Bundle tests FAILED ==="
     exit 1
 fi
 
-rm -f "${TASK_YAML}"
+echo ""
+echo "=== Bundle tests PASSED ==="

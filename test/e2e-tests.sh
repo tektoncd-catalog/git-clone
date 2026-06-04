@@ -44,8 +44,19 @@ else
     kubectl apply -f "${ROOT_DIR}/task/git-clone/git-clone.yaml"
 fi
 
-echo "--- Creating test TaskRuns"
+echo "--- Installing git-clone stepaction"
+if [[ -n "${GIT_INIT_IMAGE:-}" ]]; then
+    sed "s|ghcr.io/tektoncd-catalog/git-clone:[^ \"]*|${GIT_INIT_IMAGE}|g" \
+        "${ROOT_DIR}/stepaction/git-clone/git-clone.yaml" | kubectl apply -f -
+else
+    kubectl apply -f "${ROOT_DIR}/stepaction/git-clone/git-clone.yaml"
+fi
+
+echo "--- Creating test TaskRuns (task)"
 kubectl apply -f "${ROOT_DIR}/task/git-clone/tests/run.yaml"
+
+echo "--- Creating test TaskRuns (stepaction)"
+kubectl apply -f "${ROOT_DIR}/stepaction/git-clone/tests/run.yaml"
 
 # Collect all TaskRun names
 TASKRUNS=$(kubectl get taskrun -o name | sed 's|taskrun.tekton.dev/||')

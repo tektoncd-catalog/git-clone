@@ -65,9 +65,11 @@ jobs:
           REGISTRY: "ghcr.io/${{ github.repository }}"
         run: |
           tkn bundle push "${REGISTRY}/bundle:${GIT_TAG}" \
-            -f task/git-clone/git-clone.yaml
+            -f task/git-clone/git-clone.yaml \
+            -f stepaction/git-clone/git-clone.yaml
           tkn bundle push "${REGISTRY}/bundle:latest" \
-            -f task/git-clone/git-clone.yaml
+            -f task/git-clone/git-clone.yaml \
+            -f stepaction/git-clone/git-clone.yaml
 
       - name: Sign Tekton Bundle
         env:
