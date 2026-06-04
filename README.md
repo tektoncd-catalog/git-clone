@@ -1,5 +1,7 @@
 # Git Clone Task for Tekton
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/git-clone)](https://artifacthub.io/packages/search?repo=git-clone)
+
 This repository contains the `git-clone` Task for [Tekton Pipelines](https://tekton.dev/), providing Git repository cloning capabilities.
 
 The `git-clone` Task clones a repo from the provided URL into the output Workspace.
