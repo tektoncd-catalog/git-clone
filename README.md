@@ -71,7 +71,7 @@ spec:
 | `noProxy` | Opt out of proxying HTTP/HTTPS requests | `""` |
 | `verbose` | Log the commands executed during operation | `"true"` |
 | `userFriendlyErrors` | Print user-friendly error messages with hints | `"true"` |
-| `gitInitImage` | The image providing the `git-init` binary | `"ghcr.io/tektoncd-catalog/git-clone:v1.3.0"` |
+| `gitInitImage` | The image providing the `git-init` binary | `"ghcr.io/tektoncd-catalog/git-clone:v1.4.0"` |
 | `userHome` | Absolute path to the user's home directory | `"/home/git"` |
 
 ## Workspaces
