@@ -4,18 +4,18 @@ metadata:
   annotations:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
-      - kind: added
-        description: Added a new git-clone StepAction generated from the Task.
-      - kind: added
-        description: Added StepAction test coverage and integrated StepAction bundle publishing into release flow.
-      - kind: added
-        description: Added task signing support to the release process and included a public signing key.
-      - kind: changed
-        description: Updated Task and StepAction READMEs for Artifact Hub metadata and usage clarity.
-      - kind: changed
-        description: Added parameter and result reference tables to the StepAction README.
       - kind: fixed
-        description: Fixed changelog normalization in the release script to correctly handle backticks.
+        description: release script signing and bundle workflow
+      - kind: fixed
+        description: release script version detection and signing
+      - kind: fixed
+        description: strip spurious resources: {} from signed task YAMLs
+      - kind: fixed
+        description: strip spurious resources: {} from signed task YAML
+      - kind: changed
+        description: set Artifact Hub repository ID for StepAction
+      - kind: changed
+        description: add Artifact Hub metadata for StepAction repository
     artifacthub.io/license: Apache-2.0
     artifacthub.io/links: |
       - name: support
@@ -33,10 +33,10 @@ metadata:
     tekton.dev/displayName: git clone
     tekton.dev/pipelines.minVersion: 1.0.0
     tekton.dev/platforms: linux/amd64,linux/s390x,linux/ppc64le,linux/arm64
-    tekton.dev/signature: MEYCIQD2ne687n9f3kW46OcppHMQMu7+j2LU9tosGd9Kc5QcYgIhAMq1uNF8VIUwu2K8w4ZDacCtPiyf8lFFBRrMVpKsUa1C
+    tekton.dev/signature: MEUCIHnHqhYc0TCdI0THZqZis3CEvOdyAsRTV7cN/lc7F0fPAiEAztvz5/7Frmwiu58wcfaUtRad7geXouOUIcXwQZ0tcfE=
     tekton.dev/tags: git
   labels:
-    app.kubernetes.io/version: 1.6.0
+    app.kubernetes.io/version: 1.6.1
   name: git-clone
 spec:
   description: |-
@@ -112,7 +112,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.0
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.1
     description: The image providing the git-init binary that this Task runs.
     name: gitInitImage
     type: string

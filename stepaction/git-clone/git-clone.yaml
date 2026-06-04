@@ -1,21 +1,26 @@
+# This file is generated from task/git-clone/git-clone.yaml
+# Do not edit directly — run: ./hack/generate-stepaction.sh
 apiVersion: tekton.dev/v1beta1
 kind: StepAction
 metadata:
+  name: git-clone
+  labels:
+    app.kubernetes.io/version: "1.6.1"
   annotations:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
-      - kind: added
-        description: Added a new git-clone StepAction generated from the Task.
-      - kind: added
-        description: Added StepAction test coverage and integrated StepAction bundle publishing into release flow.
-      - kind: added
-        description: Added task signing support to the release process and included a public signing key.
-      - kind: changed
-        description: Updated Task and StepAction READMEs for Artifact Hub metadata and usage clarity.
-      - kind: changed
-        description: Added parameter and result reference tables to the StepAction README.
       - kind: fixed
-        description: Fixed changelog normalization in the release script to correctly handle backticks.
+        description: release script signing and bundle workflow
+      - kind: fixed
+        description: release script version detection and signing
+      - kind: fixed
+        description: strip spurious resources: {} from signed task YAMLs
+      - kind: fixed
+        description: strip spurious resources: {} from signed task YAML
+      - kind: changed
+        description: set Artifact Hub repository ID for StepAction
+      - kind: changed
+        description: add Artifact Hub metadata for StepAction repository
     artifacthub.io/license: Apache-2.0
     artifacthub.io/links: |
       - name: support
@@ -33,34 +38,29 @@ metadata:
     tekton.dev/displayName: git clone
     tekton.dev/pipelines.minVersion: 1.0.0
     tekton.dev/platforms: linux/amd64,linux/s390x,linux/ppc64le,linux/arm64
-    tekton.dev/signature: MEUCIDkryxW5p1Gnz7Tm/+PEvcBU/Jf1AbwoUAN15f5xrCvNAiEAuP2EdMZcX6VrkPJqfNBAPiKVp6PW+IVM2n7zo/NyDZU=
+    tekton.dev/signature: MEYCIQD2ne687n9f3kW46OcppHMQMu7+j2LU9tosGd9Kc5QcYgIhAMq1uNF8VIUwu2K8w4ZDacCtPiyf8lFFBRrMVpKsUa1C
     tekton.dev/tags: git
   labels:
-    app.kubernetes.io/version: 1.6.0
+    app.kubernetes.io/version: "1.6.1"
   name: git-clone
 spec:
-  description: This StepAction clones a git repository for use by other steps in your
-    Pipeline. It clones a repo from the provided url into the output path. By default
-    the repo will be cloned into the root of the provided path. You can clone into
-    a subdirectory by setting this StepAction's subdirectory param. It also supports
-    sparse checkouts. To perform a sparse checkout, pass a list of comma separated
-    directory patterns to this StepAction's sparseCheckoutDirectories param.
+  description: >-
   params:
-  - description: The git repo will be cloned onto this path.
-    name: output-path
-    type: string
-  - default: ""
-    description: |
-      A .ssh directory with private key, known_hosts, config, etc.
-    name: ssh-directory-path
-  - default: ""
-    description: |
-      A directory path containing a .gitconfig and .git-credentials file.
-    name: basic-auth-path
-  - default: ""
-    description: |
-      A directory containing CA certificates for HTTPS verification.
-    name: ssl-ca-directory-path
+    - name: output-path
+      description: The git repo will be cloned onto this path.
+      type: string
+    - name: ssh-directory-path
+      description: |
+        A .ssh directory with private key, known_hosts, config, etc.
+      default: ""
+    - name: basic-auth-path
+      description: |
+        A directory path containing a .gitconfig and .git-credentials file.
+      default: ""
+    - name: ssl-ca-directory-path
+      description: |
+        A directory containing CA certificates for HTTPS verification.
+      default: ""
   - description: Repository URL to clone from.
     name: url
     type: string
@@ -130,7 +130,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.0
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.1
     description: The image providing the git-init binary that this StepAction runs.
     name: gitInitImage
     type: string
@@ -146,3 +146,53 @@ spec:
     name: url
   - description: The epoch timestamp of the commit that was fetched by this StepAction.
     name: committer-date
+  image: "$(params.gitInitImage)"
+  env:
+  - name: HOME
+    value: "$(params.userHome)"
+  - name: PARAM_URL
+    value: $(params.url)
+  - name: PARAM_REVISION
+    value: $(params.revision)
+  - name: PARAM_REFSPEC
+    value: $(params.refspec)
+  - name: PARAM_SUBMODULES
+    value: $(params.submodules)
+  - name: PARAM_SUBMODULE_PATHS
+    value: $(params.submodulePaths)
+  - name: PARAM_DEPTH
+    value: $(params.depth)
+  - name: PARAM_SSL_VERIFY
+    value: $(params.sslVerify)
+  - name: PARAM_CRT_FILENAME
+    value: $(params.crtFileName)
+  - name: PARAM_SUBDIRECTORY
+    value: $(params.subdirectory)
+  - name: PARAM_DELETE_EXISTING
+    value: $(params.deleteExisting)
+  - name: PARAM_HTTP_PROXY
+    value: $(params.httpProxy)
+  - name: PARAM_HTTPS_PROXY
+    value: $(params.httpsProxy)
+  - name: PARAM_NO_PROXY
+    value: $(params.noProxy)
+  - name: PARAM_VERBOSE
+    value: $(params.verbose)
+  - name: PARAM_USER_FRIENDLY_ERRORS
+    value: $(params.userFriendlyErrors)
+  - name: PARAM_SPARSE_CHECKOUT_DIRECTORIES
+    value: $(params.sparseCheckoutDirectories)
+  - name: PARAM_USER_HOME
+    value: $(params.userHome)
+  - name: PARAM_OUTPUT_PATH
+    value: $(params.output-path)
+  - name: PARAM_SSH_DIRECTORY_PATH
+    value: $(params.ssh-directory-path)
+  - name: PARAM_BASIC_AUTH_DIRECTORY_PATH
+    value: $(params.basic-auth-path)
+  - name: PARAM_SSL_CA_DIRECTORY_PATH
+    value: $(params.ssl-ca-directory-path)
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+  script: |
