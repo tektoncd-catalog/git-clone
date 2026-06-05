@@ -4,46 +4,8 @@ metadata:
   annotations:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
-      - kind: fixed
-        description: "always quote descriptions in AH changelog"
       - kind: changed
-        description: "bump version to v1.6.0"
-      - kind: fixed
-        description: "quote descriptions containing colons in changelog"
-      - kind: changed
-        description: "bump version to v1.6.0"
-      - kind: fixed
-        description: "sanitize special YAML chars in changelog descriptions"
-      - kind: changed
-        description: "bump version to v1.6.0"
-      - kind: fixed
-        description: "reset version for v1.6.0 re-release (pyyaml generator)"
-      - kind: fixed
-        description: "quote special characters in artifacthub changelog annotation"
-      - kind: changed
-        description: "bump version to v1.6.0"
-      - kind: fixed
-        description: "reset version to v1.5.0 for v1.6.0 re-release"
-      - kind: fixed
-        description: "rewrite StepAction generator with pyyaml"
-      - kind: changed
-        description: "bump version to v1.6.1"
-      - kind: fixed
-        description: "release script signing and bundle workflow"
-      - kind: fixed
-        description: "release script version detection and signing"
-      - kind: fixed
-        description: "strip spurious resources: from signed task YAMLs"
-      - kind: fixed
-        description: "strip spurious resources: from signed task YAML"
-      - kind: changed
-        description: "set Artifact Hub repository ID for StepAction"
-      - kind: changed
-        description: "add Artifact Hub metadata for StepAction repository"
-      - kind: changed
-        description: "bump version to v1.6.0"
-      - kind: fixed
-        description: "release script backtick stripping in changelog normalization"
+        description: "CI now builds the git-clone base image for multiple architectures."
     artifacthub.io/license: Apache-2.0
     artifacthub.io/links: |
       - name: support
@@ -61,10 +23,10 @@ metadata:
     tekton.dev/displayName: git clone
     tekton.dev/pipelines.minVersion: 1.0.0
     tekton.dev/platforms: linux/amd64,linux/s390x,linux/ppc64le,linux/arm64
-    tekton.dev/signature: MEQCIEdGAsZTpaMBymAigU4KshGeCaD0DwCKclg7PhJWB5M6AiBqNfwHYJow5ejZ8eMixGLzoc8IITiuj5sdWEtA93Wkew==
+    tekton.dev/signature: MEYCIQCWXbSZuVWzUEPxiYoo3PakJ0qsUOQKbRSv38tHufOG0gIhAOuwYN3fe4/SsOgyb1L0aTyRilPPk4HuSAGtpmRJO884
     tekton.dev/tags: git
   labels:
-    app.kubernetes.io/version: 1.6.0
+    app.kubernetes.io/version: 1.7.0
   name: git-clone
 spec:
   description: |-
@@ -140,7 +102,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.6.0
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.7.0
     description: The image providing the git-init binary that this Task runs.
     name: gitInitImage
     type: string
