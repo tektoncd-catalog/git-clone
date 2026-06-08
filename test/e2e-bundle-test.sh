@@ -38,8 +38,18 @@ BUNDLE_REF="${BUNDLE_REGISTRY}/git-clone-e2e-$(head -c 8 /proc/sys/kernel/random
 echo "--- Installing Tekton Pipelines ${PIPELINE_VERSION}"
 kubectl apply --filename "https://github.com/tektoncd/pipeline/releases/download/${PIPELINE_VERSION}/release.yaml"
 echo "--- Waiting for Tekton Pipelines to be ready"
-kubectl wait --for=condition=available --timeout=120s deployment/tekton-pipelines-controller -n tekton-pipelines
-kubectl wait --for=condition=available --timeout=120s deployment/tekton-pipelines-webhook -n tekton-pipelines
+# Wait for every control-plane deployment to be Available (cold kind nodes may
+# still be pulling images), then wait for the admission webhook to actually
+# have ready endpoints before applying any Tekton resources.
+kubectl wait --for=condition=available --timeout=300s \
+    deployment --all -n tekton-pipelines
+for _ in $(seq 1 30); do
+    if [[ -n "$(kubectl get endpoints tekton-pipelines-webhook \
+        -n tekton-pipelines -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null)" ]]; then
+        break
+    fi
+    sleep 5
+done
 
 # Prepare YAMLs (with optional image override)
 TASK_YAML=$(mktemp)
