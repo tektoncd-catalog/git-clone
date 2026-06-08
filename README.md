@@ -51,6 +51,9 @@ spec:
 
 - **[Task reference](task/git-clone/README.md)** — full parameter, workspace, and authentication docs
 - **[StepAction reference](stepaction/git-clone/README.md)** — composable step version
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** — architecture, generation, testing, and release process
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — contribution workflow and CI expectations
+- **[AGENTS.md](AGENTS.md)** — quick reference for AI coding agents
 
 ## Building
 
