@@ -51,8 +51,8 @@ Every PR runs `.github/workflows/build.yaml`, which must pass:
   fails if the committed `stepaction/` file differs from a freshly generated
   one. If this fails, run `./hack/generate-stepaction.sh` and commit the result.
 - **E2E matrix** — installs the Task in a kind cluster and runs the TaskRuns in
-  `tests/run.yaml` across the supported Tekton Pipelines versions, plus the
-  bundle e2e test.
+  `task/git-clone/tests/run.yaml` and `stepaction/git-clone/tests/run.yaml`
+  across the supported Tekton Pipelines versions, plus the bundle e2e test.
 
 > [!TIP]
 > Before pushing, run `./hack/generate-stepaction.sh` and make sure

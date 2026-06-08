@@ -37,7 +37,7 @@ Key files:
 | `hack/release.sh` | Release automation: bump version → regenerate → changelog → commit → tag → push. |
 | `hack/apply-ah-changes.py` | Injects the `artifacthub.io/changes` annotation during release. |
 | `test/` | e2e runners (`e2e-tests.sh`, `e2e-bundle-test.sh`). |
-| `keys/` | `cosign.pub` (bundle verification) and signing material. |
+| `keys/` | `cosign.pub`, the public key for verifying signed release bundles. |
 | `.github/workflows/` | `build.yaml` (test/verify/e2e), `release.yaml` (bundle publish), `base-image.yaml` (multi-arch base image). |
 
 ### Why generate the StepAction?
@@ -126,7 +126,8 @@ E2e tests run against a real Tekton install in a local
 ```bash
 kind create cluster
 
-# Task: install it and run every TaskRun in tests/run.yaml
+# Task: install it and run every TaskRun in task/git-clone/tests/run.yaml
+# (and stepaction/git-clone/tests/run.yaml)
 ./test/e2e-tests.sh
 
 # Bundle: push the Task as a Tekton bundle and resolve it via the bundle resolver
