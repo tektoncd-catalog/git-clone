@@ -16,7 +16,7 @@ detail see [DEVELOPMENT.md](DEVELOPMENT.md).
 | `hack/release.sh` | Release automation. |
 | `hack/apply-ah-changes.py` | Injects the `artifacthub.io/changes` annotation at release. |
 | `test/` | e2e runners (`e2e-tests.sh`, `e2e-bundle-test.sh`). |
-| `keys/` | `cosign.pub` and signing material. |
+| `keys/` | `cosign.pub`, the public key for verifying signed release bundles. |
 | `.github/workflows/` | `build.yaml` (test/verify/e2e), `release.yaml` (bundle publish), `base-image.yaml`. |
 
 ## Critical Rules
