@@ -134,6 +134,9 @@ spec:
     name: url
   - description: The epoch timestamp of the commit that was fetched by this StepAction.
     name: committer-date
+  - description: The Git tag pointing at the fetched commit, or a fallback (git describe
+      / shortsha).
+    name: commit-tag
   image: $(params.gitInitImage)
   env:
   - name: HOME
@@ -261,3 +264,10 @@ spec:
     printf "%s" "${RESULT_COMMITTER_DATE}" > "$(step.results.committer-date.path)"
     printf "%s" "${RESULT_SHA}" > "$(step.results.commit.path)"
     printf "%s" "${PARAM_URL}" > "$(step.results.url.path)"
+
+    git fetch origin 'refs/tags/*:refs/tags/*' --depth=1 2>/dev/null || git fetch origin 'refs/tags/*:refs/tags/*' 2>/dev/null || true
+    COMMIT_TAG="$(git tag --points-at HEAD | head -n1)"
+    if [ -z "${COMMIT_TAG}" ] ; then
+      COMMIT_TAG="$(git describe --tags --always 2>/dev/null || echo "no-tag")"
+    fi
+    printf "%s" "${COMMIT_TAG}" > "$(step.results.commit-tag.path)"
