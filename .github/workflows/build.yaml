@@ -60,7 +60,7 @@ jobs:
           go-version-file: "image/git-init/go.mod"
           cache-dependency-path: "image/git-init/go.sum"
 
-      - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
+      - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
 
       - name: Create Kind cluster
         uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
@@ -100,7 +100,7 @@ jobs:
           go-version-file: "image/git-init/go.mod"
           cache-dependency-path: "image/git-init/go.sum"
 
-      - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
+      - uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
 
       - uses: tektoncd/actions/setup-tektoncd-cli@dd92514472167b361de1c95fd31fc2ef83c282ec # main
 
