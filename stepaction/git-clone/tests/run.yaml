@@ -71,3 +71,30 @@ spec:
   workspaces:
     - name: output
       emptyDir: {}
+---
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-clone-stepaction-commit-tag
+spec:
+  taskSpec:
+    workspaces:
+      - name: output
+    steps:
+      - ref:
+          name: git-clone
+        params:
+          - name: url
+            value: https://github.com/kelseyhightower/nocode
+          - name: revision
+            value: "1.0.0"
+          - name: depth
+            value: "0"
+          - name: output-path
+            value: $(workspaces.output.path)
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+    - name: output
+      emptyDir: {}
