@@ -191,8 +191,21 @@ spec:
       set -x
     fi
 
+    case "${PARAM_USER_HOME}" in
+      "${PARAM_OUTPUT_PATH}"|"${PARAM_OUTPUT_PATH}"/*)
+        printf "userHome must not be inside the output workspace, got: %s\n" "${PARAM_USER_HOME}" >&2
+        exit 1
+        ;;
+    esac
+
     # Ensure the user home directory exists (it may not in minimal images)
     mkdir -p "${PARAM_USER_HOME}"
+
+    cleanup_credentials() {
+      rm -f "${PARAM_USER_HOME}/.git-credentials" "${PARAM_USER_HOME}/.gitconfig"
+      rm -rf "${PARAM_USER_HOME}/.ssh"
+    }
+    trap cleanup_credentials EXIT
 
     if [ "${PARAM_BASIC_AUTH_DIRECTORY_PATH}" != "" ] ; then
       cp "${PARAM_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
@@ -213,6 +226,17 @@ spec:
           export GIT_SSL_CAINFO="${PARAM_SSL_CA_DIRECTORY_PATH}/${PARAM_CRT_FILENAME}"
        fi
     fi
+
+    if [ -n "${PARAM_SUBDIRECTORY}" ] ; then
+      case "${PARAM_SUBDIRECTORY}" in
+        /*) printf "subdirectory param must be a relative path, got: %s\n" "${PARAM_SUBDIRECTORY}" >&2; exit 1 ;;
+      esac
+      if printf "%s" "${PARAM_SUBDIRECTORY}" | grep -qE '(^|/)\.\.(/|$)'; then
+        printf "subdirectory param must not contain '..', got: %s\n" "${PARAM_SUBDIRECTORY}" >&2
+        exit 1
+      fi
+    fi
+
     CHECKOUT_DIR="${PARAM_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
 
     cleandir() {
