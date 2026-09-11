@@ -79,6 +79,7 @@ spec:
 | `commit` | The precise commit SHA that was fetched |
 | `url` | The precise URL that was fetched |
 | `committer-date` | The epoch timestamp of the fetched commit |
+| `commit-tag` | The Git tag pointing at the fetched commit, or a fallback (git describe / shortsha) |
 
 ## Platforms
 

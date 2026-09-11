@@ -207,3 +207,24 @@ spec:
       value: https://github.com/kelseyhightower/nocode
     - name: sparseCheckoutDirectories
       value: "CONTRIBUTING.md,STYLE.md"
+---
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  name: git-clone-run-commit-tag
+spec:
+  workspaces:
+    - name: output
+      emptyDir: {}
+  taskRef:
+    name: git-clone
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  params:
+    - name: url
+      value: https://github.com/kelseyhightower/nocode
+    - name: revision
+      value: 1.0.0
+    - name: depth
+      value: "0"
