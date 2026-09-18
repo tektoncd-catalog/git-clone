@@ -4,8 +4,26 @@ metadata:
   annotations:
     artifacthub.io/category: integration-delivery
     artifacthub.io/changes: |
+      - kind: fixed
+        description: "Prevent credential leakage from URLs in logs, results, and shell traces"
+      - kind: fixed
+        description: "Prevent git option injection via revision/refspec in fetch, checkout, and show commit"
+      - kind: fixed
+        description: "Validate subdirectory and userHome params to prevent path traversal and credential copy to shared workspace; clean up credentials on step exit"
       - kind: changed
-        description: "CI now builds the git-clone base image for multiple architectures."
+        description: "Bump alpine/git base image to latest version"
+      - kind: changed
+        description: "Bump GitHub Actions dependencies (checkout, setup-go, setup-ko, setup-crane, goreleaser-action, setup-buildx-action, setup-qemu-action)"
+      - kind: changed
+        description: "Group dependabot updates and fix gomod path"
+      - kind: changed
+        description: "Drop Trusted Resources signature from release"
+      - kind: added
+        description: "Add Artifact Hub StepActions badge and browse links"
+      - kind: added
+        description: "Add DEVELOPMENT.md, CONTRIBUTING.md, and AGENTS.md documentation"
+      - kind: changed
+        description: "Make e2e tests more robust against flakes"
     artifacthub.io/license: Apache-2.0
     artifacthub.io/links: |
       - name: support
@@ -25,7 +43,7 @@ metadata:
     tekton.dev/platforms: linux/amd64,linux/s390x,linux/ppc64le,linux/arm64
     tekton.dev/tags: git
   labels:
-    app.kubernetes.io/version: 1.7.0
+    app.kubernetes.io/version: "1.7.1"
   name: git-clone
 spec:
   description: |-
@@ -101,7 +119,7 @@ spec:
       Print user-friendly error messages with actionable hints and reproduction commands when git operations fail. Set to "false" to disable.
     name: userFriendlyErrors
     type: string
-  - default: ghcr.io/tektoncd-catalog/git-clone:v1.7.0
+  - default: ghcr.io/tektoncd-catalog/git-clone:v1.7.1
     description: The image providing the git-init binary that this Task runs.
     name: gitInitImage
     type: string

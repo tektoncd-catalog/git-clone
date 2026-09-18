@@ -20,7 +20,7 @@ taskRef:
   resolver: bundles
   params:
     - name: bundle
-      value: ghcr.io/tektoncd-catalog/git-clone/bundle:v1.7.0
+      value: ghcr.io/tektoncd-catalog/git-clone/bundle:v1.7.1
     - name: name
       value: git-clone
     - name: kind
