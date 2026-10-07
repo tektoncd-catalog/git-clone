@@ -38,6 +38,41 @@ jobs:
             exit 1
           fi
 
+  ah-lint-tasks:
+    name: ArtifactHub Lint (tasks)
+    runs-on: ubuntu-latest
+    container:
+      image: artifacthub/ah:v1.23.0
+      options: --user root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Lint tasks
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          # v1.0.1 and v1.2.0 contain Task manifests labelled 1.0.0 and 1.1.0.
+          # Exclude only those immutable historical mismatches from this CI clone.
+          git tag -d v1.0.1 v1.2.0
+          ah lint -k tekton-task -p task --tekton-versioning git
+
+  ah-lint-stepactions:
+    name: ArtifactHub Lint (stepactions)
+    runs-on: ubuntu-latest
+    container:
+      image: artifacthub/ah:v1.23.0
+      options: --user root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Lint stepactions
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          ah lint -k tekton-stepaction -p stepaction --tekton-versioning git
+
   e2e:
     name: E2E (${{ matrix.pipeline-version }})
     needs: [build]
@@ -132,7 +167,7 @@ jobs:
 
   ci-summary:
     name: CI summary
-    needs: [build, e2e, e2e-bundle]
+    needs: [build, ah-lint-tasks, ah-lint-stepactions, e2e, e2e-bundle]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -140,6 +175,8 @@ jobs:
         run: |
           results=(
             "build=${NEEDS_BUILD_RESULT}"
+            "ah-lint-tasks=${NEEDS_AH_LINT_TASKS_RESULT}"
+            "ah-lint-stepactions=${NEEDS_AH_LINT_STEPACTIONS_RESULT}"
             "e2e=${NEEDS_E2E_RESULT}"
             "e2e-bundle=${NEEDS_E2E_BUNDLE_RESULT}"
           )
@@ -161,5 +198,7 @@ jobs:
           echo "All CI checks passed"
         env:
           NEEDS_BUILD_RESULT: ${{ needs.build.result }}
+          NEEDS_AH_LINT_TASKS_RESULT: ${{ needs.ah-lint-tasks.result }}
+          NEEDS_AH_LINT_STEPACTIONS_RESULT: ${{ needs.ah-lint-stepactions.result }}
           NEEDS_E2E_RESULT: ${{ needs.e2e.result }}
           NEEDS_E2E_BUNDLE_RESULT: ${{ needs.e2e-bundle.result }}
