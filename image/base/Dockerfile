@@ -15,7 +15,7 @@
 # Base image for git-clone task.
 # Includes git, git-lfs, openssh-client, and a nonroot user (uid 65532)
 # matching Tekton's default securityContext.
-FROM docker.io/alpine/git:v2.54.0@sha256:ae0f6f4bce38d2b8c40becc0d6241a08d9f57186ea03029de2189a2b5e722d94
+FROM docker.io/alpine/git:v2.54.0@sha256:a4bb51f1a3553df194ce679fc1db721d8bfba2046fa1a88fe9d4ac551ffbce25
 
 RUN apk add --no-cache git-lfs openssh-client && \
     adduser -D -u 65532 -G root tekton && \
