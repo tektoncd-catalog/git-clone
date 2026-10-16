@@ -49,6 +49,10 @@ type KReference struct {
 	// Note: This API is EXPERIMENTAL and might break anytime. For more details: https://github.com/knative/eventing/issues/5086
 	// +optional
 	Group string `json:"group,omitempty"`
+
+	// Address points to a specific Address Name.
+	// +optional
+	Address *string `json:"address,omitempty"`
 }
 
 func (kr *KReference) Validate(ctx context.Context) *apis.FieldError {
@@ -98,7 +102,6 @@ func (kr *KReference) Validate(ctx context.Context) *apis.FieldError {
 					Details: fmt.Sprintf("parent namespace: %q does not match ref: %q", parentNS, kr.Namespace),
 				})
 			}
-
 		}
 	}
 	return errs
@@ -123,4 +126,13 @@ func isKReferenceGroupAllowed(ctx context.Context) bool {
 // For more details: https://github.com/knative/eventing/issues/5086
 func KReferenceGroupAllowed(ctx context.Context) context.Context {
 	return context.WithValue(ctx, isGroupAllowed{}, struct{}{})
+}
+
+func (kr *KReference) String() string {
+	address := ""
+	if kr.Address != nil {
+		address = *kr.Address
+	}
+	return fmt.Sprintf("Kind = %s, Namespace = %s, Name = %s, APIVersion = %s, Group = %s, Address = %s",
+		kr.Kind, kr.Namespace, kr.Name, kr.APIVersion, kr.Group, address)
 }

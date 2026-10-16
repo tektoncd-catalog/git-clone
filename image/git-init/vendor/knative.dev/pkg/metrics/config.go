@@ -41,26 +41,26 @@ const (
 	DomainEnv = "METRICS_DOMAIN"
 
 	// The following keys are used to configure metrics reporting.
-	// See https://github.com/knative/serving/blob/main/config/config-observability.yaml
+	// See https://github.com/knative/serving/blob/main/config/core/configmaps/observability.yaml
 	// for details.
 	collectorAddressKey = "metrics.opencensus-address"
 	collectorSecureKey  = "metrics.opencensus-require-tls"
 	reportingPeriodKey  = "metrics.reporting-period-seconds"
 
-	defaultBackendEnvName = "DEFAULT_METRICS_BACKEND"
-	defaultPrometheusPort = 9090
-	maxPrometheusPort     = 65535
-	minPrometheusPort     = 1024
-	defaultPrometheusHost = "0.0.0.0"
-	prometheusPortEnvName = "METRICS_PROMETHEUS_PORT"
-	prometheusHostEnvName = "METRICS_PROMETHEUS_HOST"
+	defaultBackendEnvName            = "DEFAULT_METRICS_BACKEND"
+	defaultPrometheusPort            = 9090
+	defaultPrometheusReportingPeriod = 5
+	defaultOpenCensusReportingPeriod = 60
+	maxPrometheusPort                = 65535
+	minPrometheusPort                = 1024
+	defaultPrometheusHost            = "0.0.0.0"
+	prometheusPortEnvName            = "METRICS_PROMETHEUS_PORT"
+	prometheusHostEnvName            = "METRICS_PROMETHEUS_HOST"
 )
 
-var (
-	// TestOverrideBundleCount is a variable for testing to reduce the size (number of metrics) buffered before
-	// OpenCensus will send a bundled metric report. Only applies if non-zero.
-	TestOverrideBundleCount = 0
-)
+// TestOverrideBundleCount is a variable for testing to reduce the size (number of metrics) buffered before
+// OpenCensus will send a bundled metric report. Only applies if non-zero.
+var TestOverrideBundleCount = 0
 
 // Metrics backend "enum".
 const (
@@ -206,9 +206,9 @@ func createMetricsConfig(_ context.Context, ops ExporterOptions) (*metricsConfig
 	} else {
 		switch mc.backendDestination {
 		case openCensus:
-			mc.reportingPeriod = time.Minute
+			mc.reportingPeriod = defaultOpenCensusReportingPeriod * time.Second
 		case prometheus:
-			mc.reportingPeriod = 5 * time.Second
+			mc.reportingPeriod = defaultPrometheusReportingPeriod * time.Second
 		}
 	}
 	return &mc, nil
@@ -232,7 +232,7 @@ func prometheusPort() (int, error) {
 		return defaultPrometheusPort, nil
 	}
 
-	pp, err := strconv.ParseUint(ppStr, 10, 16)
+	pp, err := strconv.ParseInt(ppStr, 10, 16)
 	if err != nil {
 		return -1, fmt.Errorf("the environment variable %q could not be parsed as a port number: %w",
 			prometheusPortEnvName, err)
