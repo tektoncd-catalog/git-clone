@@ -64,7 +64,9 @@ func getFactory(defaultExporter view.Exporter, stored []ocagent.ExporterOption) 
 			// Don't create duplicate exporters for the default exporter.
 			return defaultExporter, nil
 		}
-		opts := append(stored, ocagent.WithResourceDetector(
+		opts := make([]ocagent.ExporterOption, 0, len(stored)+1)
+		opts = append(opts, stored...)
+		opts = append(opts, ocagent.WithResourceDetector(
 			func(context.Context) (*resource.Resource, error) {
 				return r, nil
 			}))
@@ -99,7 +101,7 @@ func getCredentials(component string, secret *corev1.Secret, logger *zap.Sugared
 		return nil
 	}
 	return credentials.NewTLS(&tls.Config{
-		MinVersion: tls.VersionTLS12,
+		MinVersion: tls.VersionTLS13,
 		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			cert, err := tls.X509KeyPair(secret.Data["client-cert.pem"], secret.Data["client-key.pem"])
 			if err != nil {
