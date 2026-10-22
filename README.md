@@ -2,6 +2,7 @@
 
 [![Artifact Hub Tasks](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/git-clone)](https://artifacthub.io/packages/search?repo=git-clone)
 [![Artifact Hub StepActions](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/git-clone-stepaction)](https://artifacthub.io/packages/search?repo=git-clone-stepaction)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ftektoncd-catalog%2Fgit-clone.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Ftektoncd-catalog%2Fgit-clone?ref=badge_shield)
 
 This repository contains the `git-clone` [Task](task/git-clone/) and [StepAction](stepaction/git-clone/) for [Tekton Pipelines](https://tekton.dev/), providing Git repository cloning capabilities.
 
@@ -64,3 +65,7 @@ To build the `git-init` image:
 cd image/git-init
 ko build --local .
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Ftektoncd-catalog%2Fgit-clone.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Ftektoncd-catalog%2Fgit-clone?ref=badge_large)
